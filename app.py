@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-from streamlit_gsheets import GSheetsConnection
+import requests
 
 # Configuração estável da página para ocupar a tela toda
 st.set_page_config(
@@ -43,35 +43,61 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- CONEXÃO ORIGINAL ESTÁVEL ---
-try:
-    conn = st.connection("gsheets", type=GSheetsConnection)
+# --- FUNÇÃO CENTRAL DE LEITURA VIA API DA SUA MACRO ---
+def ler_da_planilha(nome_aba):
+    """Busca os dados estruturados direto do link da sua Macro Google sem usar connectors."""
+    try:
+        url_macro = st.secrets["connections"]["gsheets"]["macro_url"]
+        resposta = requests.get(f"{url_macro}?sheet_name={nome_aba}", timeout=15)
+        matriz = resposta.json()
+        if len(matriz) > 0:
+            # Reconstrói a tabela usando a primeira linha como cabeçalho
+            return pd.DataFrame(matriz[1:], columns=matriz[0])
+    except Exception as e:
+        st.warning(f"Aviso de sincronização na aba {nome_aba}: {e}")
     
-    df_devedores = conn.read(worksheet="Clientes", ttl=0)
-    df_produtos = conn.read(worksheet="Produtos", ttl=0)
-    
-    if df_devedores.empty:
-        df_devedores = pd.DataFrame(columns=["Nome", "Telefone", "Limite", "Divida"])
-    if df_produtos.empty:
-        df_produtos = pd.DataFrame(columns=["Código", "Produto", "Preço", "Atacado", "Estoque", "Minimo"])
-        
-    df_devedores["Limite"] = pd.to_numeric(df_devedores["Limite"], errors='coerce').fillna(0.0)
-    df_devedores["Divida"] = pd.to_numeric(df_devedores["Divida"], errors='coerce').fillna(0.0)
-    df_produtos["Preço"] = pd.to_numeric(df_produtos["Preço"], errors='coerce').fillna(0.0)
-    df_produtos["Atacado"] = pd.to_numeric(df_produtos["Atacado"], errors='coerce').fillna(0.0)
-    df_produtos["Estoque"] = pd.to_numeric(df_produtos["Estoque"], errors='coerce').fillna(0).astype(int)
-    df_produtos["Minimo"] = pd.to_numeric(df_produtos["Minimo"], errors='coerce').fillna(0).astype(int)
+    # Retornos de segurança vazios estruturados
+    if nome_aba == "Clientes":
+        return pd.DataFrame(columns=["Nome", "Telefone", "Limite", "Divida"])
+    return pd.DataFrame(columns=["Código", "Produto", "Preço", "Atacado", "Estoque", "Minimo"])
 
-except Exception as e:
-    st.error("⚠️ Erro de conexão com o Google Sheets ao carregar a página inicial.")
-    st.exception(e)
-    st.stop()
+# --- FUNÇÃO CENTRAL DE GRAVAÇÃO VIA API DA SUA MACRO ---
+def salvar_na_planilha(nome_aba, df_atualizado):
+    """Envia os dados estruturados em tipos puros para a Macro reescrever as linhas no Sheets."""
+    try:
+        url_macro = st.secrets["connections"]["gsheets"]["macro_url"]
+        
+        # Converte tudo para formato de texto/número puro limpo antes do JSON
+        if "Telefone" in df_atualizado.columns:
+            df_atualizado["Telefone"] = df_atualizado["Telefone"].astype(str)
+        if "Código" in df_atualizado.columns:
+            df_atualizado["Código"] = df_atualizado["Código"].astype(str)
+            
+        matriz_pura = df_atualizado.astype(object).where(pd.notnull(df_atualizado), None).values.tolist()
+        linhas = [df_atualizado.columns.tolist()] + matriz_pura
+        
+        payload = {"sheet_name": nome_aba, "data": linhas}
+        headers = {"Content-Type": "application/json"}
+        requests.post(url_macro, json=payload, headers=headers, timeout=15)
+    except Exception as e:
+        st.error(f"Erro ao salvar na aba {nome_aba}: {e}")
+
+# --- SINCRONIZAÇÃO AUTOMÁTICA DOS DADOS ---
+df_devedores = ler_da_planilha("Clientes")
+df_produtos = ler_da_planilha("Produtos")
+
+df_devedores["Limite"] = pd.to_numeric(df_devedores["Limite"], errors='coerce').fillna(0.0)
+df_devedores["Divida"] = pd.to_numeric(df_devedores["Divida"], errors='coerce').fillna(0.0)
+df_produtos["Preço"] = pd.to_numeric(df_produtos["Preço"], errors='coerce').fillna(0.0)
+df_produtos["Atacado"] = pd.to_numeric(df_produtos["Atacado"], errors='coerce').fillna(0.0)
+df_produtos["Estoque"] = pd.to_numeric(df_produtos["Estoque"], errors='coerce').fillna(0).astype(int)
+df_produtos["Minimo"] = pd.to_numeric(df_produtos["Minimo"], errors='coerce').fillna(0).astype(int)
 
 opcoes_menu = ["Dashboard Inicial", "Gestão de Fiados", "Tabelas de Preço"]
 if 'menu_atual' not in st.session_state:
     st.session_state.menu_atual = "Dashboard Inicial"
 
-st.markdown('<div class="topbar"><h2 style="margin:0; color:white;">🛍️ MERCADINHO PRO</h2><span>🟢 BANCO DE DADOS ATIVO</span></div>', unsafe_allow_html=True)
+st.markdown('<div class="topbar"><h2 style="margin:0; color:white;">🛍️ MERCADINHO PRO</h2><span>🟢 CONEXÃO MACRO ATIVA</span></div>', unsafe_allow_html=True)
 
 col_b1, col_b2, col_b3 = st.columns(3)
 with col_b1:
@@ -128,18 +154,14 @@ elif menu == "Gestão de Fiados":
     with aba_cad:
         with st.expander("➕ Cadastrar Novo Cliente"):
             nome = st.text_input("Nome do Cliente")
-            tel = st.text_input("Telefone")
+            tel = st.text_input("Telefone", value="")
             limite = st.number_input("Limite (R$)", min_value=0.0, value=200.0)
             if st.button("Salvar Cliente"):
-                try:
-                    novo_cli = pd.DataFrame([{"Nome": nome, "Telefone": str(tel), "Limite": float(limite), "Divida": 0.0}])
-                    df_devedores = pd.concat([df_devedores, novo_cli], ignore_index=True)
-                    conn.create(worksheet="Clientes", data=df_devedores)
-                    st.success("Cadastrado na Planilha!")
-                    st.rerun()
-                except Exception as erro_salvar:
-                    st.error("⚠️ Falha ao salvar cliente. O app não caiu, veja o erro abaixo:")
-                    st.exception(erro_salvar)
+                novo_cli = pd.DataFrame([{"Nome": nome, "Telefone": str(tel).strip(), "Limite": float(limite), "Divida": 0.0}])
+                df_devedores = pd.concat([df_devedores, novo_cli], ignore_index=True)
+                salvar_na_planilha("Clientes", df_devedores)
+                st.success("Salvo com sucesso!")
+                st.rerun()
                 
         st.write("### 💸 Lançar Compra ou Pagamento")
         if not df_devedores.empty and len(df_devedores["Nome"].tolist()) > 0:
@@ -148,22 +170,14 @@ elif menu == "Gestão de Fiados":
             cb1, cb2 = st.columns(2)
             with cb1:
                 if st.button("🔴 Adicionar à Dívida (+ Fiado)", use_container_width=True):
-                    try:
-                        df_devedores.loc[df_devedores["Nome"] == cliente_sel, "Divida"] += val_operacao
-                        conn.create(worksheet="Clientes", data=df_devedores)
-                        st.rerun()
-                    except Exception as erro_add:
-                        st.error("⚠️ Falha ao adicionar fiado:")
-                        st.exception(erro_add)
+                    df_devedores.loc[df_devedores["Nome"] == cliente_sel, "Divida"] += val_operacao
+                    salvar_na_planilha("Clientes", df_devedores)
+                    st.rerun()
             with cb2:
                 if st.button("🟢 Abater Dívida (Cliente Pagou)", use_container_width=True):
-                    try:
-                        df_devedores.loc[df_devedores["Nome"] == cliente_sel, "Divida"] -= val_operacao
-                        conn.create(worksheet="Clientes", data=df_devedores)
-                        st.rerun()
-                    except Exception as erro_abater:
-                        st.error("⚠️ Falha ao abater dívida:")
-                        st.exception(erro_abater)
+                    df_devedores.loc[df_devedores["Nome"] == cliente_sel, "Divida"] -= val_operacao
+                    salvar_na_planilha("Clientes", df_devedores)
+                    st.rerun()
         else:
             st.write("Nenhum cliente cadastrado.")
             
@@ -171,13 +185,9 @@ elif menu == "Gestão de Fiados":
         if not df_devedores.empty and len(df_devedores["Nome"].tolist()) > 0:
             cliente_remover = st.selectbox("Selecione para remover:", df_devedores["Nome"].tolist(), key="rem")
             if st.button("🗑️ CONFIRMAR REMOÇÃO", use_container_width=True):
-                try:
-                    df_devedores = df_devedores[df_devedores["Nome"] != cliente_remover].reset_index(drop=True)
-                    conn.create(worksheet="Clientes", data=df_devedores)
-                    st.rerun()
-                except Exception as erro_rem:
-                    st.error("⚠️ Falha ao remover pessoa:")
-                    st.exception(erro_rem)
+                df_devedores = df_devedores[df_devedores["Nome"] != cliente_remover].reset_index(drop=True)
+                salvar_na_planilha("Clientes", df_devedores)
+                st.rerun()
                 
     st.write("---")
     st.write("### Lista Geral de Contas")
@@ -198,25 +208,26 @@ elif menu == "Tabelas de Preço":
             p_atacado = st.number_input("Preço Atacado", min_value=0.0)
             est_inicial = st.number_input("Estoque Atual", min_value=0)
             est_min = st.number_input("Mínimo", min_value=0)
+            
             if st.button("Cadastrar Produto"):
-                try:
-                    novo_prod = pd.DataFrame([{"Código": str(cod), "Produto": nome_prod, "Preço": float(p_varejo), "Atacado": float(p_atacado), "Estoque": int(est_inicial), "Minimo": int(est_min)}])
-                    df_produtos = pd.concat([df_produtos, novo_prod], ignore_index=True)
-                    conn.create(worksheet="Produtos", data=df_produtos)
-                    st.rerun()
-                except Exception as erro_prod:
-                    st.error("⚠️ Falha ao cadastrar produto:")
-                    st.exception(erro_prod)
+                novo_prod = pd.DataFrame([{
+                    "Código": str(cod).strip(), 
+                    "Produto": nome_prod, 
+                    "Preço": float(p_varejo), 
+                    "Atacado": float(p_atacado), 
+                    "Estoque": int(est_inicial), 
+                    "Minimo": int(est_min)
+                }])
+                df_produtos = pd.concat([df_produtos, novo_prod], ignore_index=True)
+                salvar_na_planilha("Produtos", df_produtos)
+                st.rerun()
+                
         st.dataframe(df_produtos, use_container_width=True)
         
     with aba_p2:
         if not df_produtos.empty and len(df_produtos["Produto"].tolist()) > 0:
             prod_remover = st.selectbox("Selecione produto para remover:", df_produtos["Produto"].tolist())
             if st.button("🗑️ CONFIRMAR EXCLUSÃO"):
-                try:
-                    df_produtos = df_produtos[df_produtos["Produto"] != prod_remover].reset_index(drop=True)
-                    conn.create(worksheet="Produtos", data=df_produtos)
-                    st.rerun()
-                except Exception as erro_excluir:
-                    st.error("⚠️ Falha ao excluir produto:")
-                    st.exception(erro_excluir)
+                df_produtos = df_produtos[df_produtos["Produto"] != prod_remover].reset_index(drop=True)
+                salvar_na_planilha("Produtos", df_produtos)
+                st.rerun()
