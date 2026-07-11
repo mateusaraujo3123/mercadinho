@@ -2,27 +2,40 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 
-# Configuração da página para ocupar a tela toda
+# Configuração estável da página para ocupar a tela toda
 st.set_page_config(
     page_title="SIGE Lite - Mercadinho", 
     layout="wide", 
     initial_sidebar_state="expanded"
 )
 
-# --- ESTILIZAÇÃO CSS ORIGINAL (Com correção segura de cores para os botões) ---
+# --- CONFIGURAÇÃO INVIOLÁVEL DE MODO CLARO (CSS FORÇADO EM TUDO) ---
 st.markdown("""
     <style>
-    /* Oculta o botão Deploy antigo e o menu padrão */
-    .stDeployButton, #MainMenu {
+    /* Oculta o botão Deploy antigo, o atualizado e o menu do Streamlit */
+    .stDeployButton, iframe[title="deploy"], [data-testid="stDeployButton"], button[title="Deploy this app"], #MainMenu {
         display: none !important;
+        visibility: hidden !important;
     }
     
-    /* Fundo geral claro original */
-    .stApp {
-        background-color: #F8F9FA;
+    /* Bloqueia a janela flutuante de anúncio que abre no meio da tela */
+    [role="dialog"], .stModal, div[data-baseweb="modal"] {
+        display: none !important;
+        visibility: hidden !important;
+    }
+
+    /* OBRIGATORIEDADE DO MODO CLARO: Força fundo branco e textos escuros em todas as áreas principais */
+    html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stSidebar"], [data-testid="stSidebarNav"] {
+        background-color: #F8F9FA !important; 
+        color: #333333 !important;
     }
     
-    /* Topbar Roxa */
+    /* Garante visibilidade escura para textos comuns, parágrafos, labels e títulos no fundo claro */
+    h1, h2, h3, h4, h5, h6, p, label, span, small {
+        color: #333333 !important;
+    }
+    
+    /* Topbar Roxa do topo permanece idêntica ao seu modelo original */
     .topbar {
         background-color: #6A1B9A;
         padding: 15px;
@@ -33,15 +46,18 @@ st.markdown("""
         justify-content: space-between;
         align-items: center;
     }
+    .topbar h2, .topbar span {
+        color: white !important;
+    }
     
-    /* Cartões brancos do Dashboard */
+    /* Cartões brancos do Dashboard com bordas sutis claras */
     .dashboard-card {
-        background-color: white;
+        background-color: #FFFFFF !important;
         padding: 20px;
         border-radius: 8px;
         box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.05);
         margin-bottom: 20px;
-        border-top: 4px solid #6A1B9A;
+        border: 1px solid #EAEAEA !important;
     }
     
     /* Alertas de Estoque */
@@ -50,17 +66,17 @@ st.markdown("""
         justify-content: space-between;
         padding: 8px 0;
         border-bottom: 1px solid #EEEEEE;
-        color: #333333;
+        color: #333333 !important;
     }
     .stock-critical {
-        color: #D32F2F;
+        color: #D32F2F !important;
         font-weight: bold;
     }
     
-    /* CORREÇÃO DOS TEXTOS APAGADOS: Letras pretas em negrito sobre o fundo roxo */
+    /* NOMES 100% VISÍVEIS: Letras pretas intensas em negrito sobre os cartões roxos do topo */
     div.stButton > button {
-        background-color: #BA68C8 !important; /* Roxo ligeiramente mais claro para dar contraste */
-        color: #000000 !important; /* Letras pretas intensas para legibilidade absoluta */
+        background-color: #BA68C8 !important; /* Roxo claro para dar contraste perfeito */
+        color: #000000 !important; /* Letras pretas absolutas */
         border: 2px solid #4A148C !important;
         padding: 12px 20px !important;
         font-weight: 900 !important; /* Força o negrito máximo */
@@ -69,10 +85,23 @@ st.markdown("""
     div.stButton > button:hover {
         background-color: #CE93D8 !important;
     }
+
+    /* Caixas de texto, seletores e inputs travados em fundo branco com borda cinza clara */
+    input, select, div[data-baseweb="select"], div[data-baseweb="input"], .stSelectbox {
+        background-color: #FFFFFF !important;
+        color: #333333 !important;
+        border: 1px solid #CCCCCC !important;
+    }
+    
+    /* Impede que as tabelas de dados fiquem escuras ou invertam cores */
+    .stDataFrame div, [data-testid="stTable"] div {
+        background-color: #FFFFFF !important;
+        color: #333333 !important;
+    }
     </style>
 """, unsafe_allow_html=True)
 
-# --- BANCO DE DADOS EM MEMÓRIA ---
+# --- SIMULAÇÃO DE BANCO DE DADOS EM MEMÓRIA ---
 if 'devedores' not in st.session_state:
     st.session_state.devedores = pd.DataFrame([
         {"Nome": "João Silva", "Telefone": "11999999999", "Limite": 500.0, "Divida": 350.0},
@@ -97,12 +126,12 @@ if 'menu_atual' not in st.session_state:
 # --- HEADER SUPERIOR ESTILO SIGELITE ---
 st.markdown("""
     <div class="topbar">
-        <h2 style='margin:0; color:white;'>🛍️ MERCADINHO PRO</h2>
-        <span style='font-size:14px;'>🟢 SISTEMA ONLINE • ENTRADA DIRETA</span>
+        <h2 style='margin:0;'>🛍️ MERCADINHO PRO</h2>
+        <span style='font-size:14px;'>🟢 MODO CLARO FORÇADO • ENTRADA DIRETA</span>
     </div>
 """, unsafe_allow_html=True)
 
-# BOTÕES DO TOPO (Modificados para usar colunas diretas estáveis)
+# BOTÕES DO TOPO ATIVOS (Configurados por colunas estáveis nativas)
 col_b1, col_b2, col_b3 = st.columns(3)
 with col_b1:
     if st.button("👥 PESSOAS", use_container_width=True):
@@ -136,8 +165,14 @@ if menu == "Dashboard Inicial":
         st.markdown('<div class="dashboard-card"><h3 style="color:#333;">Top Maiores Devedores (R$)</h3></div>', unsafe_allow_html=True)
         if not st.session_state.devedores.empty:
             df_sorted = st.session_state.devedores.sort_values(by="Divida", ascending=True)
+            # Gráfico configurado com textos escuros nativos para fundo claro
             fig = px.bar(df_sorted, x="Divida", y="Nome", orientation='h', color_discrete_sequence=['#6A1B9A'])
-            fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', height=300)
+            fig.update_layout(
+                paper_bgcolor='rgba(0,0,0,0)', 
+                plot_bgcolor='rgba(0,0,0,0)', 
+                height=300,
+                font=dict(color="#333333")
+            )
             st.plotly_chart(fig, use_container_width=True)
         else:
             st.write("Nenhuma dívida registrada.")
@@ -153,7 +188,7 @@ if menu == "Dashboard Inicial":
                 </div>
             """, unsafe_allow_html=True)
 
-    # Cards de Resumo inferiores originais
+    # Cards de Resumo inferiores originais em modo claro nativo
     st.write("---")
     c1, c2, c3 = st.columns(3)
     total_fiado = st.session_state.devedores["Divida"].sum()
