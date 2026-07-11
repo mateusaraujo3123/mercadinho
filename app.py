@@ -9,7 +9,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- CONFIGURAÇÃO INVIOLÁVEL DE MODO CLARO E PALAVRAS 100% VISÍVEIS ---
+# --- CONFIGURAÇÃO INVIOLÁVEL DE MODO CLARO AND PALAVRAS 100% VISÍVEIS ---
 st.markdown("""
     <style>
     /* Oculta o botão Deploy antigo, o atualizado e o menu do Streamlit */
@@ -167,14 +167,14 @@ if menu == "Dashboard Inicial":
             df_sorted = st.session_state.devedores.sort_values(by="Divida", ascending=True)
             fig = px.bar(df_sorted, x="Divida", y="Nome", orientation='h', color_discrete_sequence=['#6A1B9A'])
             
-            # ATUALIZAÇÃO DEFINITIVA DO GRÁFICO: Letras pretas em negrito para os nomes de devedores e valores
+            # CORREÇÃO DO ERRO DO GRÁFICO: Removido o 'width=100' inválido que causava o travamento
             fig.update_layout(
                 paper_bgcolor='rgba(0,0,0,0)', 
                 plot_bgcolor='rgba(0,0,0,0)', 
                 height=300,
                 font=dict(color="#000000", size=14, family="Arial"),
                 xaxis=dict(tickfont=dict(color='#000000', size=12), title_font=dict(color='#000000')),
-                yaxis=dict(tickfont=dict(color='#000000', size=12, width=100), title_font=dict(color='#000000'))
+                yaxis=dict(tickfont=dict(color='#000000', size=12), title_font=dict(color='#000000'))
             )
             st.plotly_chart(fig, use_container_width=True)
         else:
