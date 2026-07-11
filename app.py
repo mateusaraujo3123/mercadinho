@@ -45,19 +45,15 @@ st.markdown("""
 
 # --- CONEXÃO REAL COM O GOOGLE SHEETS ---
 try:
-    # Captura o link direto dos Secrets do Streamlit
-    url_base = st.secrets["connections"]["gsheets"]["spreadsheet"]
+    # 1. Puxa a URL limpa direto dos seus Secrets
+    url_planilha = st.secrets["connections"]["gsheets"]["spreadsheet"]
     
-    # Transforma o link normal em um link de exportação direta do Pandas
-    url_limpa = url_base.split("/edit")[0]
-    url_clientes = f"{url_limpa}/export?format=csv&gid=0"
+    # 2. Constrói os links oficiais de exportação CSV para cada aba (padrão Google)
+    url_clientes = f"{url_planilha.split('/edit')[0]}/gviz/tq?tqx=out:csv&sheet=Clientes"
+    url_produtos = f"{url_planilha.split('/edit')[0]}/gviz/tq?tqx=out:csv&sheet=Produtos"
     
-    # Se a sua aba 'Produtos' for a segunda, o id dela geralmente é 1 (ou você pode usar o nome direto via Pandas)
-    # Para garantir compatibilidade total, lemos via Pandas direto usando a URL pública de exportação
+    # 3. O Pandas lê as abas de forma independente e direta
     df_devedores = pd.read_csv(url_clientes)
-    
-    # Como o Pandas lê direto da Web, usamos o leitor padrão do Excel para a segunda aba
-    url_produtos = f"{url_limpa}/export?format=csv&sheet=Produtos"
     df_produtos = pd.read_csv(url_produtos)
     
     # Se a planilha estiver vazia, carrega uma estrutura padrão para não quebrar
@@ -76,7 +72,7 @@ try:
 
 except Exception as e:
     st.error("⚠️ Ocorreu um erro real na conexão:")
-    st.exception(e)  # Isso vai printar o erro exato do Python na tela do seu app
+    st.exception(e)
     st.stop()
 
 opcoes_menu = ["Dashboard Inicial", "Gestão de Fiados", "Tabelas de Preço"]
