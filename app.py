@@ -2,16 +2,22 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 
-# Configuração da página para ocupar a tela toda e forçar o tema claro de fábrica
+# Configuração da página para ocupar a tela toda e forçar o zoom reduzido no celular
 st.set_page_config(
     page_title="SIGE Lite - Mercadinho", 
     layout="wide", 
     initial_sidebar_state="expanded"
 )
 
-# --- CONFIGURAÇÃO RIGOROSA E EXCLUSIVA DE MODO CLARO (CSS FORÇADO) ---
+# --- CONFIGURAÇÃO RIGOROSA DE MODO CLARO E TEXTOS VISÍVEIS (CSS FORÇADO) ---
 st.markdown("""
     <style>
+    /* FORÇA O CELULAR A ABRIR COM MENOS ZOOM (CABE TUDO NA TELA) */
+    @viewport {
+        width: device-width;
+        zoom: 0.8; /* Diminui o zoom automático em aparelhos mobile */
+    }
+    
     /* Oculta o botão Deploy antigo, o atualizado e o menu do Streamlit */
     .stDeployButton, iframe[title="deploy"], [data-testid="stDeployButton"], button[title="Deploy this app"], #MainMenu {
         display: none !important;
@@ -24,13 +30,13 @@ st.markdown("""
         visibility: hidden !important;
     }
 
-    /* EXCLUSÃO DO DARK MODE: Força fundo branco e textos escuros em absolutamente tudo */
+    /* Força fundo branco e textos escuros em tudo */
     html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stSidebar"], [data-testid="stSidebarNav"] {
         background-color: #F8F9FA !important; 
         color: #333333 !important;
     }
     
-    /* Garante visibilidade preta/escura para textos e títulos no fundo claro */
+    /* Garante visibilidade preta/escura para textos comuns e títulos no fundo claro */
     h1, h2, h3, h4, h5, h6, p, label, span, small {
         color: #333333 !important;
     }
@@ -48,6 +54,21 @@ st.markdown("""
     }
     .topbar h2, .topbar span {
         color: white !important;
+    }
+    
+    /* CORREÇÃO DOS BOTÕES APAGADOS: Força o texto de dentro dos botões roxos a ficar BRANCO PURO e visível */
+    div.stButton > button, div.stButton > button p {
+        background-color: #4A148C !important;
+        color: #FFFFFF !important; /* Texto branco absoluto */
+        border: 1px solid #7B1FA2 !important;
+        padding: 12px 20px !important;
+        font-weight: bold !important;
+        border-radius: 8px !important;
+        opacity: 1 !important; /* Remove qualquer transparência que apague o nome */
+    }
+    div.stButton > button:hover {
+        background-color: #7B1FA2 !important;
+        color: #FFFFFF !important;
     }
     
     /* Cartões do Dashboard totalmente brancos e limpos */
@@ -83,20 +104,6 @@ st.markdown("""
         border: 1px solid #CCCCCC !important;
     }
     
-    /* Estilo padrão forçado para os botões roxos do topo */
-    div.stButton > button {
-        background-color: #4A148C !important;
-        color: white !important;
-        border: 1px solid #7B1FA2 !important;
-        padding: 12px 20px !important;
-        font-weight: bold !important;
-        border-radius: 8px !important;
-    }
-    div.stButton > button:hover {
-        background-color: #7B1FA2 !important;
-        color: white !important;
-    }
-    
     /* Ajuste para as tabelas de dados (Dataframes) não escurecerem */
     .stDataFrame div {
         background-color: #FFFFFF !important;
@@ -105,31 +112,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- SISTEMA DE LOGIN COM MEMÓRIA POR DISPOSITIVO ---
-if "usuario_logado" not in st.session_state:
-    st.session_state.usuario_logado = False
-
-# Se o dispositivo não tiver logado, exibe apenas a tela de login travada no claro
-if not st.session_state.usuario_logado:
-    st.markdown("<h2 style='text-align: center; color: #6A1B9A; margin-top: 50px;'>🔒 Login Único - Mercadinho Pro</h2>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align: center; color: #666;'>O sistema lembrará deste aparelho após o primeiro acesso.</p>", unsafe_allow_html=True)
-    
-    # CORREÇÃO DEFINITIVA: Centraliza os campos de login informando 3 colunas
-    col_esq, col_login, col_dir = st.columns([1, 2, 1])
-    with col_login:
-        usuario_input = st.text_input("Usuário:")
-        senha_input = st.text_input("Senha:", type="password")
-        
-        if st.button("Entrar e Lembrar Dispositivo", use_container_width=True):
-            if usuario_input == "marcio" and senha_input == "marcio":
-                st.session_state.usuario_logado = True
-                st.success("Aparelho autorizado com sucesso!")
-                st.rerun()
-            else:
-                st.error("Usuário ou senha incorretos.")
-    st.stop()
-
-# --- SE CHEGOU AQUI, O DISPOSITIVO ESTÁ AUTORIZADO E ENTRA NO SISTEMA CLARO ---
+# --- REMOVIDO: O sistema de login foi completamente excluído! Você entrará direto agora ---
 
 # --- SIMULAÇÃO DE BANCO DE DADOS EM MEMÓRIA ---
 if 'devedores' not in st.session_state:
@@ -150,15 +133,18 @@ if 'produtos' not in st.session_state:
 
 opcoes_menu = ["Dashboard Inicial", "Gestão de Fiados", "Tabelas de Preço"]
 
+if 'menu_atual' not in st.session_state:
+    st.session_state.menu_atual = "Dashboard Inicial"
+
 # --- HEADER SUPERIOR ESTILO SIGELITE ---
 st.markdown("""
     <div class="topbar">
         <h2 style='margin:0;'>🛍️ MERCADINHO PRO</h2>
-        <span style='font-size:14px;'>🟢 MODO CLARO OBRIGATÓRIO • ACESSO SEGURO</span>
+        <span style='font-size:14px;'>🟢 MODO CLARO OBRIGATÓRIO • ENTRADA DIRETA</span>
     </div>
 """, unsafe_allow_html=True)
 
-# Botões superiores alinhados
+# Botões superiores alinhados (Agora com nomes bem acesos em branco)
 col_b1, col_b2, col_b3 = st.columns(3)
 with col_b1:
     if st.button("👥 PESSOAS", use_container_width=True):
@@ -177,10 +163,6 @@ st.write("---")
 
 # --- BARRA LATERAL ORIGINAL ---
 st.sidebar.title("🏪 Menu Mercadinho")
-if st.sidebar.button("🔒 Esquecer Aparelho (Sair)"):
-    st.session_state.usuario_logado = False
-    st.rerun()
-
 st.sidebar.write("---")
 indice_padrao = opcoes_menu.index(st.session_state.menu_atual) if 'menu_atual' in st.session_state else 0
 menu = st.sidebar.radio("Ir para:", opcoes_menu, index=indice_padrao)
