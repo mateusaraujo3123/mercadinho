@@ -45,12 +45,20 @@ st.markdown("""
 
 # --- CONEXÃO REAL COM O GOOGLE SHEETS ---
 try:
-    # Estabelece conexão usando as configurações do secrets.toml
-    conn = st.connection("gsheets_connection", type=GSheetsConnection)
+    # Captura o link direto dos Secrets do Streamlit
+    url_base = st.secrets["connections"]["gsheets"]["spreadsheet"]
     
-    # Lê os dados em tempo real direto das abas da sua planilha
-    df_devedores = conn.read(worksheet="Clientes", ttl=0)
-    df_produtos = conn.read(worksheet="Produtos", ttl=0)
+    # Transforma o link normal em um link de exportação direta do Pandas
+    url_limpa = url_base.split("/edit")[0]
+    url_clientes = f"{url_limpa}/export?format=csv&gid=0"
+    
+    # Se a sua aba 'Produtos' for a segunda, o id dela geralmente é 1 (ou você pode usar o nome direto via Pandas)
+    # Para garantir compatibilidade total, lemos via Pandas direto usando a URL pública de exportação
+    df_devedores = pd.read_csv(url_clientes)
+    
+    # Como o Pandas lê direto da Web, usamos o leitor padrão do Excel para a segunda aba
+    url_produtos = f"{url_limpa}/export?format=csv&sheet=Produtos"
+    df_produtos = pd.read_csv(url_produtos)
     
     # Se a planilha estiver vazia, carrega uma estrutura padrão para não quebrar
     if df_devedores.empty:
