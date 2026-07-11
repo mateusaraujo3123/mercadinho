@@ -51,7 +51,7 @@ def ler_dados_macro(nome_aba):
         resposta = requests.get(f"{url_macro}?sheet_name={nome_aba}", timeout=15)
         matriz = resposta.json()
         if len(matriz) > 0:
-            return pd.DataFrame(matriz[1:], columns=matriz[0])
+            return pd.DataFrame(matriz[1:], columns=matriz)
     except Exception:
         pass
     if nome_aba == "Clientes":
@@ -59,21 +59,40 @@ def ler_dados_macro(nome_aba):
     return pd.DataFrame(columns=["Código", "Produto", "Preço", "Atacado", "Estoque", "Minimo"])
 
 def salvar_dados_macro(nome_aba, df_atualizado):
-    """Envia a tabela completa estruturada em JSON nativo para a Macro reescrever no Sheets."""
+    """Envia a tabela completa estruturada limpando tipos do Pandas para evitar crash."""
     try:
         url_macro = st.secrets["connections"]["gsheets"]["macro_url"]
-        # Garante que colunas de identificadores não virem float/int
-        if "Telefone" in df_atualizado.columns:
-            df_atualizado["Telefone"] = df_atualizado["Telefone"].astype(str).replace(r'\.0$', '', regex=True)
-        if "Código" in df_atualizado.columns:
-            df_atualizado["Código"] = df_atualizado["Código"].astype(str)
+        
+        # Cria uma cópia limpa para não quebrar a exibição atual
+        df_limpo = df_atualizado.copy()
+        
+        # Garante que colunas de identificadores fiquem como texto puro
+        if "Telefone" in df_limpo.columns:
+            df_limpo["Telefone"] = df_limpo["Telefone"].astype(str).replace(r'\.0$', '', regex=True)
+        if "Código" in df_limpo.columns:
+            df_limpo["Código"] = df_limpo["Código"].astype(str).replace(r'\.0$', '', regex=True)
             
-        matriz_pura = df_atualizado.astype(object).where(pd.notnull(df_atualizado), None).values.tolist()
+        # BLINDAGEM CRÍTICA: Converte tipos matemáticos do Pandas (int64/float64) para tipos comuns do Python
+        # Isso impede que o requests estruture um JSON corrompido que derruba o servidor
+        lista_linhas = []
+        for _, row in df_limpo.iterrows():
+            linha_convertida = []
+            for item in row.values:
+                if pd.api.types.is_integer_dtype(type(item)) or isinstance(item, (int, pd.Int64Dtype)):
+                    linha_convertida.append(int(item))
+                elif pd.api.types.is_float_dtype(type(item)) or isinstance(item, (float, pd.Float64Dtype)):
+                    linha_convertida.append(float(item))
+                else:
+                    linha_convertida.append(str(item) if pd.notnull(item) else "")
+            lista_linhas.append(linha_convertida)
+            
         payload = {
             "sheet_name": nome_aba,
-            "data": [df_atualizado.columns.tolist()] + matriz_pura
+            "data": [df_limpo.columns.tolist()] + lista_linhas
         }
-        requests.post(url_macro, json=payload, timeout=15)
+        
+        # Envia usando cabeçalhos explícitos de aplicação JSON
+        requests.post(url_macro, json=payload, headers={"Content-Type": "application/json"}, timeout=15)
     except Exception as e:
         st.error(f"Erro ao salvar na aba {nome_aba}: {e}")
 
