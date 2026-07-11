@@ -48,7 +48,6 @@ try:
     url_base = st.secrets["connections"]["gsheets"]["spreadsheet"]
     url_limpa = url_base.split("/edit")[0]
     
-    # Links de exportação direta do Google
     url_clientes = f"{url_limpa}/gviz/tq?tqx=out:csv&sheet=Clientes"
     url_produtos = f"{url_limpa}/gviz/tq?tqx=out:csv&sheet=Produtos"
     
@@ -68,30 +67,27 @@ try:
     df_produtos["Minimo"] = pd.to_numeric(df_produtos["Minimo"], errors='coerce').fillna(0).astype(int)
 
 except Exception as e:
-    st.error("⚠️ Falha ao carregar tabelas do Google Sheets:")
+    st.error("⚠️ Erro de sincronização na leitura da planilha:")
     st.exception(e)
     st.stop()
 
-# --- FUNÇÃO CORRIGIDA DE GRAVAÇÃO (SEM SPLIT TRIPLO) ---
-def enviar_dados_planilha(nome_aba, df_atualizado):
-    """Envia os dados atualizados para a planilha usando a API pública de formulários."""
+# --- FUNÇÃO DE GRAVAÇÃO VIA MACRO WEB APP ---
+def salvar_na_planilha(nome_aba, df_atualizado):
+    """Envia a tabela estruturada para a Macro salvar de forma assíncrona."""
     try:
-        # Extrai o ID da planilha entre as barras de forma segura
-        partes_url = url_base.split("/d/")
-        if len(partes_url) > 1:
-            id_planilha = partes_url[1].split("/")[0]
-            # Envia via Web Post síncrono estruturado
-            link_api = f"https://google.com{id_planilha}/formResponse"
-            csv_dados = df_atualizado.to_csv(index=False)
-            requests.post(link_api, data={"csv_data": csv_dados, "sheet_name": nome_aba}, timeout=10)
-    except Exception:
-        pass
+        url_macro = st.secrets["connections"]["gsheets"]["macro_url"]
+        # Prepara a matriz contendo o cabeçalho e os valores
+        linhas = [df_atualizado.columns.tolist()] + df_atualizado.values.tolist()
+        payload = {"sheet_name": nome_aba, "data": linhas}
+        requests.post(url_macro, json=payload, timeout=15)
+    except Exception as e:
+        st.error(f"Erro ao salvar na aba {nome_aba}: {e}")
 
 opcoes_menu = ["Dashboard Inicial", "Gestão de Fiados", "Tabelas de Preço"]
 if 'menu_atual' not in st.session_state:
     st.session_state.menu_atual = "Dashboard Inicial"
 
-st.markdown('<div class="topbar"><h2 style="margin:0; color:white;">🛍️ MERCADINHO PRO</h2><span>🟢 BANCO DE DADOS HÍBRIDO ATIVO</span></div>', unsafe_allow_html=True)
+st.markdown('<div class="topbar"><h2 style="margin:0; color:white;">🛍️ MERCADINHO PRO</h2><span>🟢 CONEXÃO PROFISSIONAL ATIVA</span></div>', unsafe_allow_html=True)
 
 col_b1, col_b2, col_b3 = st.columns(3)
 with col_b1:
@@ -153,7 +149,7 @@ elif menu == "Gestão de Fiados":
             if st.button("Salvar Cliente"):
                 novo_cli = pd.DataFrame([{"Nome": nome, "Telefone": str(tel), "Limite": float(limite), "Divida": 0.0}])
                 df_devedores = pd.concat([df_devedores, novo_cli], ignore_index=True)
-                enviar_dados_planilha("Clientes", df_devedores)
+                salvar_na_planilha("Clientes", df_devedores)
                 st.success("Salvo com sucesso!")
                 st.rerun()
                 
@@ -165,12 +161,12 @@ elif menu == "Gestão de Fiados":
             with cb1:
                 if st.button("🔴 Adicionar à Dívida (+ Fiado)", use_container_width=True):
                     df_devedores.loc[df_devedores["Nome"] == cliente_sel, "Divida"] += val_operacao
-                    enviar_dados_planilha("Clientes", df_devedores)
+                    salvar_na_planilha("Clientes", df_devedores)
                     st.rerun()
             with cb2:
                 if st.button("🟢 Abater Dívida (Cliente Pagou)", use_container_width=True):
                     df_devedores.loc[df_devedores["Nome"] == cliente_sel, "Divida"] -= val_operacao
-                    enviar_dados_planilha("Clientes", df_devedores)
+                    salvar_na_planilha("Clientes", df_devedores)
                     st.rerun()
         else:
             st.write("Nenhum cliente cadastrado.")
@@ -180,7 +176,7 @@ elif menu == "Gestão de Fiados":
             cliente_remover = st.selectbox("Selecione para remover:", df_devedores["Nome"].tolist(), key="rem")
             if st.button("🗑️ CONFIRMAR REMOÇÃO", use_container_width=True):
                 df_devedores = df_devedores[df_devedores["Nome"] != cliente_remover].reset_index(drop=True)
-                enviar_dados_planilha("Clientes", df_devedores)
+                salvar_na_planilha("Clientes", df_devedores)
                 st.rerun()
                 
     st.write("---")
@@ -213,7 +209,7 @@ elif menu == "Tabelas de Preço":
                     "Minimo": int(est_min)
                 }])
                 df_produtos = pd.concat([df_produtos, novo_prod], ignore_index=True)
-                enviar_dados_planilha("Produtos", df_produtos)
+                salvar_na_planilha("Produtos", df_produtos)
                 st.rerun()
                 
         st.dataframe(df_produtos, use_container_width=True)
@@ -223,5 +219,5 @@ elif menu == "Tabelas de Preço":
             prod_remover = st.selectbox("Selecione produto para remover:", df_produtos["Produto"].tolist())
             if st.button("🗑️ CONFIRMAR EXCLUSÃO"):
                 df_produtos = df_produtos[df_produtos["Produto"] != prod_remover].reset_index(drop=True)
-                enviar_dados_planilha("Produtos", df_produtos)
+                salvar_na_planilha("Produtos", df_produtos)
                 st.rerun()
