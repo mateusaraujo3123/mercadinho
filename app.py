@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import requests
+from streamlit_gsheets import GSheetsConnection
 
 # Configuração estável da página para ocupar a tela toda
 st.set_page_config(
@@ -43,16 +44,13 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- CONEXÃO BLINDADA: LEITURA DIRETA DO LINK DA WEB VIA PANDAS ---
+# --- CONEXÃO REAL COM O GOOGLE SHEETS OFICIAL ---
 try:
-    url_base = st.secrets["connections"]["gsheets"]["spreadsheet"]
-    url_limpa = url_base.split("/edit")[0]
+    # Usa o conector nativo estável do Streamlit para ler os dados
+    conn = st.connection("gsheets", type=GSheetsConnection)
     
-    url_clientes = f"{url_limpa}/gviz/tq?tqx=out:csv&sheet=Clientes"
-    url_produtos = f"{url_limpa}/gviz/tq?tqx=out:csv&sheet=Produtos"
-    
-    df_devedores = pd.read_csv(url_clientes)
-    df_produtos = pd.read_csv(url_produtos)
+    df_devedores = conn.read(worksheet="Clientes", ttl=0)
+    df_produtos = conn.read(worksheet="Produtos", ttl=0)
     
     if df_devedores.empty:
         df_devedores = pd.DataFrame(columns=["Nome", "Telefone", "Limite", "Divida"])
@@ -67,27 +65,27 @@ try:
     df_produtos["Minimo"] = pd.to_numeric(df_produtos["Minimo"], errors='coerce').fillna(0).astype(int)
 
 except Exception as e:
-    st.error("⚠️ Erro de sincronização na leitura da planilha:")
+    st.error("⚠️ Erro de conexão com o Google Sheets:")
     st.exception(e)
     st.stop()
 
-# --- FUNÇÃO CORRIGIDA DE GRAVAÇÃO VIA MACRO WEB APP (SEM ERRO DE SPLIT) ---
+# --- FUNÇÃO DE GRAVAÇÃO VIA MACRO WEB APP ---
 def salvar_na_planilha(nome_aba, df_atualizado):
-    """Envia a tabela estruturada diretamente para a URL da Macro do Google."""
+    """Envia os dados atualizados para a sua Macro do Google salvar instantaneamente."""
     try:
         url_macro = st.secrets["connections"]["gsheets"]["macro_url"]
-        # Organiza os dados em formato de matriz pura para o JavaScript ler
+        # Organiza as colunas e as linhas em formato de lista simples
         linhas = [df_atualizado.columns.tolist()] + df_atualizado.values.tolist()
         payload = {"sheet_name": nome_aba, "data": linhas}
         requests.post(url_macro, json=payload, timeout=15)
     except Exception as e:
-        st.error(f"Erro ao salvar na aba {nome_aba}: {e}")
+        st.error(f"Erro ao salvar dados via Macro na aba {nome_aba}: {e}")
 
 opcoes_menu = ["Dashboard Inicial", "Gestão de Fiados", "Tabelas de Preço"]
 if 'menu_atual' not in st.session_state:
     st.session_state.menu_atual = "Dashboard Inicial"
 
-st.markdown('<div class="topbar"><h2 style="margin:0; color:white;">🛍️ MERCADINHO PRO</h2><span>🟢 CONEXÃO PROFISSIONAL ATIVA</span></div>', unsafe_allow_html=True)
+st.markdown('<div class="topbar"><h2 style="margin:0; color:white;">🛍️ MERCADINHO PRO</h2><span>🟢 BANCO DE DADOS INTEGRADO ATIVO</span></div>', unsafe_allow_html=True)
 
 col_b1, col_b2, col_b3 = st.columns(3)
 with col_b1:
