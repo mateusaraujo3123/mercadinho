@@ -51,10 +51,12 @@ def ler_da_planilha(nome_aba):
         resposta = requests.get(f"{url_macro}?sheet_name={nome_aba}", timeout=15)
         matriz = resposta.json()
         if len(matriz) > 0:
-            # Transforma a resposta do JavaScript em um DataFrame do Pandas usando a linha 0 como cabeçalho
             return pd.DataFrame(matriz[1:], columns=matriz[0])
-    except Exception:
-        pass
+    except Exception as e:
+        # Mostra o erro real na tela ao invés de deixar o app cair no "Oh no"
+        st.error(f"⚠️ Erro crítico ao tentar ler a aba {nome_aba}:")
+        st.exception(e)
+        st.stop()
     # Tabelas reservas vazias com cabeçalhos estruturados para evitar falhas no código
     if nome_aba == "Clientes":
         return pd.DataFrame(columns=["Nome", "Telefone", "Limite", "Divida"])
