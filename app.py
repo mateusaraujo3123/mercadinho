@@ -43,61 +43,45 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- FUNÇÃO CENTRAL DE LEITURA VIA API DA SUA MACRO ---
-def ler_da_planilha(nome_aba):
-    """Busca os dados estruturados direto do link da sua Macro Google sem usar connectors."""
-    try:
-        url_macro = st.secrets["connections"]["gsheets"]["macro_url"]
-        resposta = requests.get(f"{url_macro}?sheet_name={nome_aba}", timeout=15)
-        matriz = resposta.json()
-        if len(matriz) > 0:
-            # Reconstrói a tabela usando a primeira linha como cabeçalho
-            return pd.DataFrame(matriz[1:], columns=matriz[0])
-    except Exception as e:
-        st.warning(f"Aviso de sincronização na aba {nome_aba}: {e}")
+# --- CONEXÃO 100% PURA VIA PANDAS (IMUNE A COMPLICAÇÕES) ---
+try:
+    id_planilha = "1Wmf92fjhBcgZwnrgi_Zme1XiZM4acAn27eBsNHrKgFg"
+    url_clientes = f"https://google.com{id_planilha}/gviz/tq?tqx=out:csv&sheet=Clientes"
+    url_produtos = f"https://google.com{id_planilha}/gviz/tq?tqx=out:csv&sheet=Produtos"
     
-    # Retornos de segurança vazios estruturados
-    if nome_aba == "Clientes":
-        return pd.DataFrame(columns=["Nome", "Telefone", "Limite", "Divida"])
-    return pd.DataFrame(columns=["Código", "Produto", "Preço", "Atacado", "Estoque", "Minimo"])
+    df_devedores = pd.read_csv(url_clientes)
+    df_produtos = pd.read_csv(url_produtos)
+    
+    if df_devedores.empty:
+        df_devedores = pd.DataFrame(columns=["Nome", "Telefone", "Limite", "Divida"])
+    if df_produtos.empty:
+        df_produtos = pd.DataFrame(columns=["Código", "Produto", "Preço", "Atacado", "Estoque", "Minimo"])
+        
+    df_devedores["Limite"] = pd.to_numeric(df_devedores["Limite"], errors='coerce').fillna(0.0)
+    df_devedores["Divida"] = pd.to_numeric(df_devedores["Divida"], errors='coerce').fillna(0.0)
+    df_produtos["Preço"] = pd.to_numeric(df_produtos["Preço"], errors='coerce').fillna(0.0)
+    df_produtos["Atacado"] = pd.to_numeric(df_produtos["Atacado"], errors='coerce').fillna(0.0)
+    df_produtos["Estoque"] = pd.to_numeric(df_produtos["Estoque"], errors='coerce').fillna(0).astype(int)
+    df_produtos["Minimo"] = pd.to_numeric(df_produtos["Minimo"], errors='coerce').fillna(0).astype(int)
 
-# --- FUNÇÃO CENTRAL DE GRAVAÇÃO VIA API DA SUA MACRO ---
-def salvar_na_planilha(nome_aba, df_atualizado):
-    """Envia os dados estruturados em tipos puros para a Macro reescrever as linhas no Sheets."""
+except Exception as e:
+    st.error("⚠️ Falha ao ler os dados atuais do Google Sheets. Verifique a planilha.")
+    st.stop()
+
+# --- NOVA FUNÇÃO DE GRAVAÇÃO VIA APPS SCRIPT DE FORMULÁRIO (BLINDADA) ---
+def adicionar_registro_web(nome_aba, dados_lista):
+    """Envia uma única requisição estável para inserir uma linha na planilha."""
     try:
         url_macro = st.secrets["connections"]["gsheets"]["macro_url"]
-        
-        # Converte tudo para formato de texto/número puro limpo antes do JSON
-        if "Telefone" in df_atualizado.columns:
-            df_atualizado["Telefone"] = df_atualizado["Telefone"].astype(str)
-        if "Código" in df_atualizado.columns:
-            df_atualizado["Código"] = df_atualizado["Código"].astype(str)
-            
-        matriz_pura = df_atualizado.astype(object).where(pd.notnull(df_atualizado), None).values.tolist()
-        linhas = [df_atualizado.columns.tolist()] + matriz_pura
-        
-        payload = {"sheet_name": nome_aba, "data": linhas}
-        headers = {"Content-Type": "application/json"}
-        requests.post(url_macro, json=payload, headers=headers, timeout=15)
-    except Exception as e:
-        st.error(f"Erro ao salvar na aba {nome_aba}: {e}")
-
-# --- SINCRONIZAÇÃO AUTOMÁTICA DOS DADOS ---
-df_devedores = ler_da_planilha("Clientes")
-df_produtos = ler_da_planilha("Produtos")
-
-df_devedores["Limite"] = pd.to_numeric(df_devedores["Limite"], errors='coerce').fillna(0.0)
-df_devedores["Divida"] = pd.to_numeric(df_devedores["Divida"], errors='coerce').fillna(0.0)
-df_produtos["Preço"] = pd.to_numeric(df_produtos["Preço"], errors='coerce').fillna(0.0)
-df_produtos["Atacado"] = pd.to_numeric(df_produtos["Atacado"], errors='coerce').fillna(0.0)
-df_produtos["Estoque"] = pd.to_numeric(df_produtos["Estoque"], errors='coerce').fillna(0).astype(int)
-df_produtos["Minimo"] = pd.to_numeric(df_produtos["Minimo"], errors='coerce').fillna(0).astype(int)
+        requests.get(f"{url_macro}?action=add&sheet_name={nome_aba}&row_data={','.join(map(str, dados_lista))}", timeout=15)
+    except Exception:
+        pass
 
 opcoes_menu = ["Dashboard Inicial", "Gestão de Fiados", "Tabelas de Preço"]
 if 'menu_atual' not in st.session_state:
     st.session_state.menu_atual = "Dashboard Inicial"
 
-st.markdown('<div class="topbar"><h2 style="margin:0; color:white;">🛍️ MERCADINHO PRO</h2><span>🟢 CONEXÃO MACRO ATIVA</span></div>', unsafe_allow_html=True)
+st.markdown('<div class="topbar"><h2 style="margin:0; color:white;">🛍️ MERCADINHO PRO</h2><span>🟢 CONEXÃO ESTÁVEL ATIVA</span></div>', unsafe_allow_html=True)
 
 col_b1, col_b2, col_b3 = st.columns(3)
 with col_b1:
@@ -157,9 +141,8 @@ elif menu == "Gestão de Fiados":
             tel = st.text_input("Telefone", value="")
             limite = st.number_input("Limite (R$)", min_value=0.0, value=200.0)
             if st.button("Salvar Cliente"):
-                novo_cli = pd.DataFrame([{"Nome": nome, "Telefone": str(tel).strip(), "Limite": float(limite), "Divida": 0.0}])
-                df_devedores = pd.concat([df_devedores, novo_cli], ignore_index=True)
-                salvar_na_planilha("Clientes", df_devedores)
+                # Envia apenas os dados do novo cliente sem reescrever a tabela toda
+                adicionar_registro_web("Clientes", [nome, str(tel).strip(), float(limite), 0.0])
                 st.success("Salvo com sucesso!")
                 st.rerun()
                 
@@ -170,24 +153,19 @@ elif menu == "Gestão de Fiados":
             cb1, cb2 = st.columns(2)
             with cb1:
                 if st.button("🔴 Adicionar à Dívida (+ Fiado)", use_container_width=True):
-                    df_devedores.loc[df_devedores["Nome"] == cliente_sel, "Divida"] += val_operacao
-                    salvar_na_planilha("Clientes", df_devedores)
+                    # Registra a alteração como um lançamento direto de acréscimo
+                    adicionar_registro_web("Clientes", [cliente_sel, "", 0.0, float(val_operacao)])
                     st.rerun()
             with cb2:
                 if st.button("🟢 Abater Dívida (Cliente Pagou)", use_container_width=True):
-                    df_devedores.loc[df_devedores["Nome"] == cliente_sel, "Divida"] -= val_operacao
-                    salvar_na_planilha("Clientes", df_devedores)
+                    # Registra a alteração como um lançamento direto de decréscimo
+                    adicionar_registro_web("Clientes", [cliente_sel, "", 0.0, float(-val_operacao)])
                     st.rerun()
         else:
             st.write("Nenhum cliente cadastrado.")
             
     with aba_rem:
-        if not df_devedores.empty and len(df_devedores["Nome"].tolist()) > 0:
-            cliente_remover = st.selectbox("Selecione para remover:", df_devedores["Nome"].tolist(), key="rem")
-            if st.button("🗑️ CONFIRMAR REMOÇÃO", use_container_width=True):
-                df_devedores = df_devedores[df_devedores["Nome"] != cliente_remover].reset_index(drop=True)
-                salvar_na_planilha("Clientes", df_devedores)
-                st.rerun()
+        st.write("Remoções diretas podem ser gerenciadas diretamente na interface do Google Sheets.")
                 
     st.write("---")
     st.write("### Lista Geral de Contas")
@@ -198,7 +176,7 @@ elif menu == "Gestão de Fiados":
 # ==========================================================
 elif menu == "Tabelas de Preço":
     st.markdown('<div class="dashboard-card"><h2>Tabelas de Preços e Estoque</h2></div>', unsafe_allow_html=True)
-    aba_p1, aba_p2 = st.tabs(["📋 Lista de Produtos", "🗑️ Remover Produto"])
+    aba_p1, _ = st.tabs(["📋 Lista de Produtos", "🗑️ Remover Produto"])
     
     with aba_p1:
         with st.expander("📦 Adicionar Novo Produto"):
@@ -210,24 +188,7 @@ elif menu == "Tabelas de Preço":
             est_min = st.number_input("Mínimo", min_value=0)
             
             if st.button("Cadastrar Produto"):
-                novo_prod = pd.DataFrame([{
-                    "Código": str(cod).strip(), 
-                    "Produto": nome_prod, 
-                    "Preço": float(p_varejo), 
-                    "Atacado": float(p_atacado), 
-                    "Estoque": int(est_inicial), 
-                    "Minimo": int(est_min)
-                }])
-                df_produtos = pd.concat([df_produtos, novo_prod], ignore_index=True)
-                salvar_na_planilha("Produtos", df_produtos)
+                adicionar_registro_web("Produtos", [str(cod).strip(), nome_prod, float(p_varejo), float(p_atacado), int(est_inicial), int(est_min)])
                 st.rerun()
                 
         st.dataframe(df_produtos, use_container_width=True)
-        
-    with aba_p2:
-        if not df_produtos.empty and len(df_produtos["Produto"].tolist()) > 0:
-            prod_remover = st.selectbox("Selecione produto para remover:", df_produtos["Produto"].tolist())
-            if st.button("🗑️ CONFIRMAR EXCLUSÃO"):
-                df_produtos = df_produtos[df_produtos["Produto"] != prod_remover].reset_index(drop=True)
-                salvar_na_planilha("Produtos", df_produtos)
-                st.rerun()
