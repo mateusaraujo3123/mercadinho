@@ -64,16 +64,23 @@ def ler_da_planilha(nome_aba):
 
 # --- FUNÇÃO CENTRAL DE GRAVAÇÃO VIA API DA SUA MACRO ---
 def salvar_na_planilha(nome_aba, df_atualizado):
-    """Envia a matriz de dados convertida em tipos puros nativos para a Macro reescrever no Sheets."""
+    """Envia a matriz de dados com cabeçalhos de navegador para evitar o crash de redirecionamento do Google."""
     try:
         url_macro = st.secrets["connections"]["gsheets"]["macro_url"]
         
-        # Converte a matriz de forma limpa para tipos nativos (int, float, str) compatíveis com JSON
+        # Converte a matriz para tipos puros nativos compatíveis com JSON
         matriz_pura = df_atualizado.astype(object).where(pd.notnull(df_atualizado), None).values.tolist()
         linhas = [df_atualizado.columns.tolist()] + matriz_pura
+        payload = {"sheet_name": nome_aba, "data": lines if 'lines' in locals() else linhas}
         
-        payload = {"sheet_name": nome_aba, "data": linhas}
-        requests.post(url_macro, json=payload, timeout=15)
+        # Cabeçalho de segurança para o Linux do Streamlit aceitar o redirecionamento do Google
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            "Content-Type": "application/json"
+        }
+        
+        # Dispara o POST permitindo o redirecionamento do Google Apps Script de forma limpa
+        requests.post(url_macro, json=payload, headers=headers, allow_redirects=True, timeout=15)
     except Exception as e:
         st.error(f"Erro ao transmitir os dados para a aba {nome_aba}: {e}")
 
