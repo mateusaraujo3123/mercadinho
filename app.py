@@ -45,10 +45,10 @@ st.markdown("""
 
 # --- CONEXÃO REAL COM O GOOGLE SHEETS ---
 try:
-    # Estabelece conexão usando as configurações do secrets.toml [2, 3]
-   conn = st.connection("gsheets", type=GSheetsConnection)
+    # Estabelece conexão usando as configurações do secrets.toml
+    conn = st.connection("gsheets_connection", type=GSheetsConnection)
     
-    # Lê os dados em tempo real direto das abas da sua planilha [2, 3]
+    # Lê os dados em tempo real direto das abas da sua planilha
     df_devedores = conn.read(worksheet="Clientes", ttl=0)
     df_produtos = conn.read(worksheet="Produtos", ttl=0)
     
