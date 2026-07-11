@@ -2,67 +2,88 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 
-# Configuração da página para ocupar a tela toda
+# Configuração da página para ocupar a tela toda e forçar o tema claro de fábrica
 st.set_page_config(
     page_title="SIGE Lite - Mercadinho", 
     layout="wide", 
     initial_sidebar_state="expanded"
 )
 
-# --- ESTILIZAÇÃO CSS (Apaga cirurgicamente APENAS o Deploy e o modal chato) ---
+# --- CONFIGURAÇÃO RIGOROSA E EXCLUSIVA DE MODO CLARO (CSS FORÇADO) ---
 st.markdown("""
     <style>
-    /* Remove o botão Deploy antigo e o atualizado de forma definitiva */
-    .stDeployButton, iframe[title="deploy"], [data-testid="stDeployButton"], button[title="Deploy this app"] {
+    /* Oculta o botão Deploy antigo, o atualizado e o menu do Streamlit */
+    .stDeployButton, iframe[title="deploy"], [data-testid="stDeployButton"], button[title="Deploy this app"], #MainMenu {
         display: none !important;
         visibility: hidden !important;
-        width: 0 !important;
-        height: 0 !important;
     }
     
-    /* Bloqueia e some com a janela flutuante de anúncio que abre no meio da tela */
+    /* Bloqueia a janela flutuante de anúncio que abre no meio da tela */
     [role="dialog"], .stModal, div[data-baseweb="modal"] {
         display: none !important;
         visibility: hidden !important;
     }
 
-    /* Mantém o fundo geral claro idêntico ao seu modelo original */
-    .stApp {
-        background-color: #F8F9FA;
+    /* EXCLUSÃO DO DARK MODE: Força fundo branco e textos escuros em absolutamente tudo */
+    html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stSidebar"], [data-testid="stSidebarNav"] {
+        background-color: #F8F9FA !important; 
+        color: #333333 !important;
     }
-    /* Topbar Roxa */
+    
+    /* Garante visibilidade preta/escura para textos e títulos no fundo claro */
+    h1, h2, h3, h4, h5, h6, p, label, span, small {
+        color: #333333 !important;
+    }
+    
+    /* Topbar Roxa do topo permanece idêntica à imagem */
     .topbar {
         background-color: #6A1B9A;
         padding: 15px;
         border-radius: 8px;
-        color: white;
+        color: white !important;
         margin-bottom: 20px;
         display: flex;
         justify-content: space-between;
         align-items: center;
     }
-    /* Cartões do Dashboard */
+    .topbar h2, .topbar span {
+        color: white !important;
+    }
+    
+    /* Cartões do Dashboard totalmente brancos e limpos */
     .dashboard-card {
-        background-color: white;
+        background-color: #FFFFFF !important;
         padding: 20px;
         border-radius: 8px;
         box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.05);
         margin-bottom: 20px;
         border-top: 4px solid #6A1B9A;
+        border-left: 1px solid #EAEAEA;
+        border-right: 1px solid #EAEAEA;
+        border-bottom: 1px solid #EAEAEA;
     }
+    
     /* Alertas de Estoque */
     .stock-alert {
         display: flex;
         justify-content: space-between;
         padding: 8px 0;
         border-bottom: 1px solid #EEEEEE;
-        color: #333333;
+        color: #333333 !important;
     }
     .stock-critical {
-        color: #D32F2F;
+        color: #D32F2F !important;
         font-weight: bold;
     }
-    /* Estilo dos botões do topo */
+    
+    /* Caixas de texto, seletores e inputs travados em fundo branco com borda cinza */
+    input, select, div[data-baseweb="select"], div[data-baseweb="input"], .stSelectbox {
+        background-color: #FFFFFF !important;
+        color: #333333 !important;
+        border: 1px solid #CCCCCC !important;
+    }
+    
+    /* Estilo padrão forçado para os botões roxos do topo */
     div.stButton > button {
         background-color: #4A148C !important;
         color: white !important;
@@ -73,9 +94,42 @@ st.markdown("""
     }
     div.stButton > button:hover {
         background-color: #7B1FA2 !important;
+        color: white !important;
+    }
+    
+    /* Ajuste para as tabelas de dados (Dataframes) não escurecerem */
+    .stDataFrame div {
+        background-color: #FFFFFF !important;
+        color: #333333 !important;
     }
     </style>
 """, unsafe_allow_html=True)
+
+# --- SISTEMA DE LOGIN COM MEMÓRIA POR DISPOSITIVO ---
+if "usuario_logado" not in st.session_state:
+    st.session_state.usuario_logado = False
+
+# Se o dispositivo não tiver logado, exibe apenas a tela de login travada no claro
+if not st.session_state.usuario_logado:
+    st.markdown("<h2 style='text-align: center; color: #6A1B9A; margin-top: 50px;'>🔒 Login Único - Mercadinho Pro</h2>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; color: #666;'>O sistema lembrará deste aparelho após o primeiro acesso.</p>", unsafe_allow_html=True)
+    
+    col_login, _ = st.columns()
+    with col_login:
+        usuario_input = st.text_input("Usuário:")
+        senha_input = st.text_input("Senha:", type="password")
+        
+        if st.button("Entrar e Lembrar Dispositivo", use_container_width=True):
+            # ADICIONADO: Seus dados de acesso personalizados
+            if usuario_input == "marcio" and senha_input == "marcio":
+                st.session_state.usuario_logado = True
+                st.success("Aparelho autorizado com sucesso!")
+                st.rerun()
+            else:
+                st.error("Usuário ou senha incorretos.")
+    st.stop()
+
+# --- SE CHEGOU AQUI, O DISPOSITIVO ESTÁ AUTORIZADO E ENTRA NO SISTEMA CLARO ---
 
 # --- SIMULAÇÃO DE BANCO DE DADOS EM MEMÓRIA ---
 if 'devedores' not in st.session_state:
@@ -96,18 +150,15 @@ if 'produtos' not in st.session_state:
 
 opcoes_menu = ["Dashboard Inicial", "Gestão de Fiados", "Tabelas de Preço"]
 
-if 'menu_atual' not in st.session_state:
-    st.session_state.menu_atual = "Dashboard Inicial"
-
 # --- HEADER SUPERIOR ESTILO SIGELITE ---
 st.markdown("""
     <div class="topbar">
-        <h2 style='margin:0; color:white;'>🛍️ MERCADINHO PRO</h2>
-        <span style='font-size:14px;'>🟢 SISTEMA ATUALIZADO • PROTEÇÃO ATIVA</span>
+        <h2 style='margin:0;'>🛍️ MERCADINHO PRO</h2>
+        <span style='font-size:14px;'>🟢 MODO CLARO OBRIGATÓRIO • ACESSO SEGURO</span>
     </div>
 """, unsafe_allow_html=True)
 
-# Divisão correta dos botões superiores por colunas
+# Botões superiores alinhados
 col_b1, col_b2, col_b3 = st.columns(3)
 with col_b1:
     if st.button("👥 PESSOAS", use_container_width=True):
@@ -126,7 +177,12 @@ st.write("---")
 
 # --- BARRA LATERAL ORIGINAL ---
 st.sidebar.title("🏪 Menu Mercadinho")
-indice_padrao = opcoes_menu.index(st.session_state.menu_atual)
+if st.sidebar.button("🔒 Esquecer Aparelho (Sair)"):
+    st.session_state.usuario_logado = False
+    st.rerun()
+
+st.sidebar.write("---")
+indice_padrao = opcoes_menu.index(st.session_state.menu_atual) if 'menu_atual' in st.session_state else 0
 menu = st.sidebar.radio("Ir para:", opcoes_menu, index=indice_padrao)
 st.session_state.menu_atual = menu
 # ==========================================================
@@ -141,7 +197,12 @@ if menu == "Dashboard Inicial":
         if not st.session_state.devedores.empty:
             df_sorted = st.session_state.devedores.sort_values(by="Divida", ascending=True)
             fig = px.bar(df_sorted, x="Divida", y="Nome", orientation='h', color_discrete_sequence=['#6A1B9A'])
-            fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', height=300)
+            fig.update_layout(
+                paper_bgcolor='rgba(0,0,0,0)', 
+                plot_bgcolor='rgba(0,0,0,0)', 
+                height=300,
+                font=dict(color="#333333")
+            )
             st.plotly_chart(fig, use_container_width=True)
         else:
             st.write("Nenhuma dívida registrada.")
@@ -157,6 +218,7 @@ if menu == "Dashboard Inicial":
                 </div>
             """, unsafe_allow_html=True)
 
+    # Cards de Resumo inferiores originais em modo claro nativo
     st.write("---")
     c1, c2, c3 = st.columns(3)
     total_fiado = st.session_state.devedores["Divida"].sum()
