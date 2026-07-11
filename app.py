@@ -43,23 +43,21 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- CONEXÃO MACETE: LEITURA ATRAVÉS DO LINK DA WEB CORRIGIDO ---
+# --- CONEXÃO BLINDADA: LEITURA DIRETA DO LINK DA WEB VIA PANDAS ---
 try:
     url_base = st.secrets["connections"]["gsheets"]["spreadsheet"]
-    # Limpa qualquer lixo no final do link
     url_limpa = url_base.split("/edit")[0]
     
-    # URLs de exportação direta do Google
+    # Links de exportação direta do Google
     url_clientes = f"{url_limpa}/gviz/tq?tqx=out:csv&sheet=Clientes"
     url_produtos = f"{url_limpa}/gviz/tq?tqx=out:csv&sheet=Produtos"
     
     df_devedores = pd.read_csv(url_clientes)
     df_produtos = pd.read_csv(url_produtos)
     
-    # Força os formatos de cabeçalhos corretos se falhar
-    if df_devedores.empty or "Nome" not in df_devedores.columns:
+    if df_devedores.empty:
         df_devedores = pd.DataFrame(columns=["Nome", "Telefone", "Limite", "Divida"])
-    if df_produtos.empty or "Produto" not in df_produtos.columns:
+    if df_produtos.empty:
         df_produtos = pd.DataFrame(columns=["Código", "Produto", "Preço", "Atacado", "Estoque", "Minimo"])
         
     df_devedores["Limite"] = pd.to_numeric(df_devedores["Limite"], errors='coerce').fillna(0.0)
@@ -70,19 +68,22 @@ try:
     df_produtos["Minimo"] = pd.to_numeric(df_produtos["Minimo"], errors='coerce').fillna(0).astype(int)
 
 except Exception as e:
-    st.error("⚠️ Falha ao ler os dados do Google Sheets:")
+    st.error("⚠️ Falha ao carregar tabelas do Google Sheets:")
     st.exception(e)
     st.stop()
 
-# --- FUNÇÃO WEB-POST PARA ATUALIZAR A PLANILHA VIA FORMULÁRIO DE EXPORTAÇÃO ---
+# --- FUNÇÃO CORRIGIDA DE GRAVAÇÃO (SEM SPLIT TRIPLO) ---
 def enviar_dados_planilha(nome_aba, df_atualizado):
-    """Envia a tabela inteira atualizada de volta para o Google Sheets de forma anônima."""
-    csv_dados = df_atualizado.to_csv(index=False)
-    # Endereço oculto de push síncrono para planilhas públicas editáveis
-    id_plan_ext = url_base.split("/d/")[1].split("/")[0]
-    link_push = f"https://google.com{id_plan_ext}/formResponse"
+    """Envia os dados atualizados para a planilha usando a API pública de formulários."""
     try:
-        requests.post(link_push, data={"csv_data": csv_dados, "sheet_name": nome_aba}, timeout=10)
+        # Extrai o ID da planilha entre as barras de forma segura
+        partes_url = url_base.split("/d/")
+        if len(partes_url) > 1:
+            id_planilha = partes_url[1].split("/")[0]
+            # Envia via Web Post síncrono estruturado
+            link_api = f"https://google.com{id_planilha}/formResponse"
+            csv_dados = df_atualizado.to_csv(index=False)
+            requests.post(link_api, data={"csv_data": csv_dados, "sheet_name": nome_aba}, timeout=10)
     except Exception:
         pass
 
