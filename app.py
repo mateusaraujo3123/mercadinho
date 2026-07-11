@@ -1,8 +1,7 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import gspread
-from google.oauth2.service_account import Credentials
+from streamlit_gsheets import GSheetsConnection
 
 # Configuração estável da página para ocupar a tela toda
 st.set_page_config(
@@ -44,41 +43,18 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- AUTENTICAÇÃO COM GOOGLE SHEETS VIA GSPREAD ---
+# --- CONEXÃO REAL COM O GOOGLE SHEETS ---
 try:
-    # Coleta dicionário de credenciais dos Secrets
-    info_chaves = dict(st.secrets["gserviceaccount"])
-    # Corrige quebras de linha na chave privada
-    info_chaves["private_key"] = info_chaves["private_key"].replace("\\n", "\n")
+    conn = st.connection("gsheets", type=GSheetsConnection)
     
-    escopos = ["https://googleapis.com", "https://googleapis.com"]
-    creds = Credentials.from_service_account_info(info_chaves, scopes=escopos)
-    client_gspread = gspread.authorize(creds)
+    df_devedores = conn.read(worksheet="Clientes", ttl=0)
+    df_produtos = conn.read(worksheet="Produtos", ttl=0)
     
-    # ID estático da sua planilha extraído da imagem
-    id_planilha = "1Wmf92fjhBcgZwnrgi_Zme1XiZM4acAn27eBsNHrKgFg"
-    planilha = client_gspread.open_by_key(id_planilha)
-    
-    # Força a conexão nativa nas abas físicas
-    aba_clientes = planilha.worksheet("Clientes")
-    aba_produtos = planilha.worksheet("Produtos")
-    
-    # get_all_values puxa os dados como listas simples de linhas
-    dados_clientes = aba_clientes.get_all_values()
-    dados_produtos = aba_produtos.get_all_values()
-    
-    # Converte as listas puras para tabelas do Pandas usando a linha 0 como cabeçalho
-    if len(dados_clientes) > 1:
-        df_devedores = pd.DataFrame(dados_clientes[1:], columns=dados_clientes[0])
-    else:
+    if df_devedores.empty:
         df_devedores = pd.DataFrame(columns=["Nome", "Telefone", "Limite", "Divida"])
-        
-    if len(dados_produtos) > 1:
-        df_produtos = pd.DataFrame(dados_produtos[1:], columns=dados_produtos[0])
-    else:
+    if df_produtos.empty:
         df_produtos = pd.DataFrame(columns=["Código", "Produto", "Preço", "Atacado", "Estoque", "Minimo"])
         
-    # Garante o tratamento numérico estável para os cálculos
     df_devedores["Limite"] = pd.to_numeric(df_devedores["Limite"], errors='coerce').fillna(0.0)
     df_devedores["Divida"] = pd.to_numeric(df_devedores["Divida"], errors='coerce').fillna(0.0)
     df_produtos["Preço"] = pd.to_numeric(df_produtos["Preço"], errors='coerce').fillna(0.0)
@@ -87,8 +63,7 @@ try:
     df_produtos["Minimo"] = pd.to_numeric(df_produtos["Minimo"], errors='coerce').fillna(0).astype(int)
 
 except Exception as e:
-    st.error("⚠️ Falha crítica no processamento das abas do Google Sheets:")
-    st.exception(e)
+    st.error("⚠️ Erro de conexão com o Google Sheets. Verifique o arquivo secrets.toml.")
     st.stop()
 
 opcoes_menu = ["Dashboard Inicial", "Gestão de Fiados", "Tabelas de Preço"]
@@ -115,6 +90,7 @@ st.write("---")
 st.sidebar.title("🏪 Menu Mercadinho")
 menu = st.sidebar.radio("Ir para:", opcoes_menu, index=opcoes_menu.index(st.session_state.menu_atual) if st.session_state.menu_atual in opcoes_menu else 0)
 st.session_state.menu_atual = menu
+
 # ==========================================================
 # 1. TELA: DASHBOARD INICIAL
 # ==========================================================
@@ -144,7 +120,6 @@ if menu == "Dashboard Inicial":
     with c1: st.metric(label="Soma Total de Fiados", value=f"R$ {df_devedores['Divida'].sum():,.2f}")
     with c2: st.metric(label="Clientes Acima do Limite", value=len(df_devedores[df_devedores["Divida"] > df_devedores["Limite"]]))
     with c3: st.metric(label="Caixa Estimado do Dia", value="R$ 1.250,00")
-
 # ==========================================================
 # 2. TELA: GESTÃO DE FIADOS
 # ==========================================================
@@ -158,9 +133,9 @@ elif menu == "Gestão de Fiados":
             tel = st.text_input("Telefone")
             limite = st.number_input("Limite (R$)", min_value=0.0, value=200.0)
             if st.button("Salvar Cliente"):
-                novo_cli = pd.DataFrame([{"Nome": nome, "Telefone": tel, "Limite": limite, "Divida": 0.0}])
+                novo_cli = pd.DataFrame([{"Nome": nome, "Telefone": str(tel), "Limite": float(limite), "Divida": 0.0}])
                 df_devedores = pd.concat([df_devedores, novo_cli], ignore_index=True)
-                conn.update(worksheet="Clientes", data=df_devedores) # Grava direto na planilha [2, 3]
+                conn.create(worksheet="Clientes", data=df_devedores) 
                 st.success("Cadastrado na Planilha!")
                 st.rerun()
                 
@@ -172,12 +147,12 @@ elif menu == "Gestão de Fiados":
             with cb1:
                 if st.button("🔴 Adicionar à Dívida (+ Fiado)", use_container_width=True):
                     df_devedores.loc[df_devedores["Nome"] == cliente_sel, "Divida"] += val_operacao
-                    conn.update(worksheet="Clientes", data=df_devedores) # Grava direto na planilha [2, 3]
+                    conn.create(worksheet="Clientes", data=df_devedores) 
                     st.rerun()
             with cb2:
                 if st.button("🟢 Abater Dívida (Cliente Pagou)", use_container_width=True):
                     df_devedores.loc[df_devedores["Nome"] == cliente_sel, "Divida"] -= val_operacao
-                    conn.update(worksheet="Clientes", data=df_devedores) # Grava direto na planilha [2, 3]
+                    conn.create(worksheet="Clientes", data=df_devedores) 
                     st.rerun()
         else:
             st.write("Nenhum cliente cadastrado.")
@@ -187,7 +162,7 @@ elif menu == "Gestão de Fiados":
             cliente_remover = st.selectbox("Selecione para remover:", df_devedores["Nome"].tolist(), key="rem")
             if st.button("🗑️ CONFIRMAR REMOÇÃO", use_container_width=True):
                 df_devedores = df_devedores[df_devedores["Nome"] != cliente_remover].reset_index(drop=True)
-                conn.update(worksheet="Clientes", data=df_devedores) # Grava direto na planilha [2, 3]
+                conn.create(worksheet="Clientes", data=df_devedores) 
                 st.rerun()
                 
     st.write("---")
@@ -209,11 +184,20 @@ elif menu == "Tabelas de Preço":
             p_atacado = st.number_input("Preço Atacado", min_value=0.0)
             est_inicial = st.number_input("Estoque Atual", min_value=0)
             est_min = st.number_input("Mínimo", min_value=0)
+            
             if st.button("Cadastrar Produto"):
-                novo_prod = pd.DataFrame([{"Código": cod, "Produto": nome_prod, "Preço": p_varejo, "Atacado": p_atacado, "Estoque": est_inicial, "Minimo": est_min}])
+                novo_prod = pd.DataFrame([{
+                    "Código": str(cod), 
+                    "Produto": nome_prod, 
+                    "Preço": float(p_varejo), 
+                    "Atacado": float(p_atacado), 
+                    "Estoque": int(est_inicial), 
+                    "Minimo": int(est_min)
+                }])
                 df_produtos = pd.concat([df_produtos, novo_prod], ignore_index=True)
-                conn.update(worksheet="Produtos", data=df_produtos) # Grava direto na planilha [2, 3]
+                conn.create(worksheet="Produtos", data=df_produtos) 
                 st.rerun()
+                
         st.dataframe(df_produtos, use_container_width=True)
         
     with aba_p2:
@@ -221,5 +205,5 @@ elif menu == "Tabelas de Preço":
             prod_remover = st.selectbox("Selecione produto para remover:", df_produtos["Produto"].tolist())
             if st.button("🗑️ CONFIRMAR EXCLUSÃO"):
                 df_produtos = df_produtos[df_produtos["Produto"] != prod_remover].reset_index(drop=True)
-                conn.update(worksheet="Produtos", data=df_produtos) # Grava direto na planilha [2, 3]
+                conn.create(worksheet="Produtos", data=df_produtos) 
                 st.rerun()
