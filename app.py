@@ -42,14 +42,14 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- CONEXÃO 100% BLINDADA VIA LINKS DE EXPORTAÇÃO CSV PADRÃO GOOGLE ---
+# --- CONEXÃO 100% BLINDADA VIA LINKS DE EXPORTAÇÃO EXCEL NATIVOS ---
 try:
-    id_planilha = "1Wmf92fjhBcgZwnrgi_Zme1XiZM4acAn27eBsNHrKgFg"
-    url_clientes = f"https://google.com{id_planilha}/export?format=csv&sheet=Clientes"
-    url_produtos = f"https://google.com{id_planilha}/export?format=csv&sheet=Produtos"
+    # URL de exportação direta da planilha inteira como arquivo Excel (.xlsx) de forma pública
+    url_excel = "https://google.com"
     
-    df_devedores = pd.read_csv(url_clientes)
-    df_produtos = pd.read_csv(url_produtos)
+    # O Pandas faz a leitura baixando o arquivo direto usando o motor openpyxl (evita erros de urlopen)
+    df_devedores = pd.read_excel(url_excel, sheet_name="Clientes", engine="openpyxl")
+    df_produtos = pd.read_excel(url_excel, sheet_name="Produtos", engine="openpyxl")
     
     if df_devedores.empty:
         df_devedores = pd.DataFrame(columns=["Nome", "Telefone", "Limite", "Divida"])
@@ -64,7 +64,7 @@ try:
     df_produtos["Minimo"] = pd.to_numeric(df_produtos["Minimo"], errors='coerce').fillna(0).astype(int)
 
 except Exception as e:
-    st.error("⚠️ Falha crítica ao acessar as abas. Verifique se os nomes estão corretos.")
+    st.error("⚠️ Erro crítico ao tentar processar o arquivo da planilha:")
     st.exception(e)
     st.stop()
 
@@ -125,7 +125,7 @@ if menu == "Dashboard Inicial":
 elif menu == "Gestão de Fiados":
     st.markdown('<div class="dashboard-card"><h2>Local dos Fiados (Controle de Clientes)</h2></div>', unsafe_allow_html=True)
     
-    st.info("💡 Como a planilha é 100% pública e segura, você pode gerenciar, cadastrar clientes e lançar/abater fiados abrindo o link diretamente no celular ou computador. O painel abaixo atualizará sozinho instantaneamente.")
+    st.info("💡 Como a planilha é pública e totalmente integrada, você pode gerenciar, cadastrar clientes e lançar/abater fiados abrindo o link diretamente no celular ou computador. O painel do Streamlit atualizará sozinho na hora.")
     
     # Botão limpo para o operador abrir a tabela e preencher na hora
     st.link_button("🔗 ABRIR PLANILHA NO GOOGLE SHEETS", "https://google.com", use_container_width=True)
