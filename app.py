@@ -44,26 +44,41 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- CONEXÃO REAL COM O GOOGLE SHEETS ---
+# --- AUTENTICAÇÃO COM GOOGLE SHEETS VIA GSPREAD ---
 try:
-    # 1. Puxa a URL limpa direto dos seus Secrets
-    url_planilha = st.secrets["connections"]["gsheets"]["spreadsheet"]
+    # Coleta dicionário de credenciais dos Secrets
+    info_chaves = dict(st.secrets["gserviceaccount"])
+    # Corrige quebras de linha na chave privada
+    info_chaves["private_key"] = info_chaves["private_key"].replace("\\n", "\n")
     
-    # 2. Constrói os links oficiais de exportação CSV para cada aba (padrão Google)
-    url_clientes = f"{url_planilha.split('/edit')[0]}/gviz/tq?tqx=out:csv&sheet=Clientes"
-    url_produtos = f"{url_planilha.split('/edit')[0]}/gviz/tq?tqx=out:csv&sheet=Produtos"
+    escopos = ["https://googleapis.com", "https://googleapis.com"]
+    creds = Credentials.from_service_account_info(info_chaves, scopes=escopos)
+    client_gspread = gspread.authorize(creds)
     
-    # 3. O Pandas lê as abas de forma independente e direta
-    df_devedores = pd.read_csv(url_clientes)
-    df_produtos = pd.read_csv(url_produtos)
+    # ID estático da sua planilha extraído da imagem
+    id_planilha = "1Wmf92fjhBcgZwnrgi_Zme1XiZM4acAn27eBsNHrKgFg"
+    planilha = client_gspread.open_by_key(id_planilha)
     
-    # Se a planilha estiver vazia, carrega uma estrutura padrão para não quebrar
-    if df_devedores.empty:
+    # Força a conexão nativa nas abas físicas
+    aba_clientes = planilha.worksheet("Clientes")
+    aba_produtos = planilha.worksheet("Produtos")
+    
+    # get_all_values puxa os dados como listas simples de linhas
+    dados_clientes = aba_clientes.get_all_values()
+    dados_produtos = aba_produtos.get_all_values()
+    
+    # Converte as listas puras para tabelas do Pandas usando a linha 0 como cabeçalho
+    if len(dados_clientes) > 1:
+        df_devedores = pd.DataFrame(dados_clientes[1:], columns=dados_clientes[0])
+    else:
         df_devedores = pd.DataFrame(columns=["Nome", "Telefone", "Limite", "Divida"])
-    if df_produtos.empty:
+        
+    if len(dados_produtos) > 1:
+        df_produtos = pd.DataFrame(dados_produtos[1:], columns=dados_produtos[0])
+    else:
         df_produtos = pd.DataFrame(columns=["Código", "Produto", "Preço", "Atacado", "Estoque", "Minimo"])
         
-    # Garante que os valores numéricos sejam tratados como números pelo Python
+    # Garante o tratamento numérico estável para os cálculos
     df_devedores["Limite"] = pd.to_numeric(df_devedores["Limite"], errors='coerce').fillna(0.0)
     df_devedores["Divida"] = pd.to_numeric(df_devedores["Divida"], errors='coerce').fillna(0.0)
     df_produtos["Preço"] = pd.to_numeric(df_produtos["Preço"], errors='coerce').fillna(0.0)
@@ -72,8 +87,8 @@ try:
     df_produtos["Minimo"] = pd.to_numeric(df_produtos["Minimo"], errors='coerce').fillna(0).astype(int)
 
 except Exception as e:
-    st.error("⚠️ Ocorreu um erro interno no processamento dos dados:")
-    st.exception(e)  # Expõe o relatório detalhado do Python na tela
+    st.error("⚠️ Falha crítica no processamento das abas do Google Sheets:")
+    st.exception(e)
     st.stop()
 
 opcoes_menu = ["Dashboard Inicial", "Gestão de Fiados", "Tabelas de Preço"]
