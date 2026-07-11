@@ -64,11 +64,14 @@ def ler_da_planilha(nome_aba):
 
 # --- FUNÇÃO CENTRAL DE GRAVAÇÃO VIA API DA SUA MACRO ---
 def salvar_na_planilha(nome_aba, df_atualizado):
-    """Envia os DataFrames novos no formato de matriz para a sua Macro reescrever as linhas."""
+    """Envia a matriz de dados convertida em tipos puros nativos para a Macro reescrever no Sheets."""
     try:
         url_macro = st.secrets["connections"]["gsheets"]["macro_url"]
-        # Junta os cabeçalhos com as listas de linhas da tabela
-        linhas = [df_atualizado.columns.tolist()] + df_atualizado.values.tolist()
+        
+        # Converte a matriz de forma limpa para tipos nativos (int, float, str) compatíveis com JSON
+        matriz_pura = df_atualizado.astype(object).where(pd.notnull(df_atualizado), None).values.tolist()
+        linhas = [df_atualizado.columns.tolist()] + matriz_pura
+        
         payload = {"sheet_name": nome_aba, "data": linhas}
         requests.post(url_macro, json=payload, timeout=15)
     except Exception as e:
