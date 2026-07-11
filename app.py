@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-from streamlit_gsheets import GSheetsConnection
 
 # Configuração estável da página para ocupar a tela toda
 st.set_page_config(
@@ -43,12 +42,21 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- CONEXÃO REAL COM O GOOGLE SHEETS ---
+# --- CONEXÃO REAL COM O GOOGLE SHEETS VIA EXPORTAÇÃO DIRETA (BLINDADA) ---
 try:
-    conn = st.connection("gsheets", type=GSheetsConnection)
+    # Coleta a URL da planilha dos Secrets
+    url_base = st.secrets["connections"]["gsheets"]["spreadsheet"]
     
-    df_devedores = conn.read(worksheet="Clientes", ttl=0)
-    df_produtos = conn.read(worksheet="Produtos", ttl=0)
+    # Remove qualquer parâmetro extra do final da URL para extrair o ID limpo
+    url_id = url_base.split("/edit")[0]
+    
+    # Links universais de exportação CSV para cada aba do Google Sheets
+    url_clientes = f"{url_id}/gviz/tq?tqx=out:csv&sheet=Clientes"
+    url_produtos = f"{url_id}/gviz/tq?tqx=out:csv&sheet=Produtos"
+    
+    # Pandas lê diretamente os dados públicos da web
+    df_devedores = pd.read_csv(url_clientes)
+    df_produtos = pd.read_csv(url_produtos)
     
     if df_devedores.empty:
         df_devedores = pd.DataFrame(columns=["Nome", "Telefone", "Limite", "Divida"])
@@ -63,7 +71,7 @@ try:
     df_produtos["Minimo"] = pd.to_numeric(df_produtos["Minimo"], errors='coerce').fillna(0).astype(int)
 
 except Exception as e:
-    st.error("⚠️ Erro de conexão com o Google Sheets. Verifique o arquivo secrets.toml.")
+    st.error("⚠️ Erro de conexão ao tentar processar as tabelas. Verifique as colunas ou o link.")
     st.stop()
 
 opcoes_menu = ["Dashboard Inicial", "Gestão de Fiados", "Tabelas de Preço"]
@@ -133,11 +141,7 @@ elif menu == "Gestão de Fiados":
             tel = st.text_input("Telefone")
             limite = st.number_input("Limite (R$)", min_value=0.0, value=200.0)
             if st.button("Salvar Cliente"):
-                novo_cli = pd.DataFrame([{"Nome": nome, "Telefone": str(tel), "Limite": float(limite), "Divida": 0.0}])
-                df_devedores = pd.concat([df_devedores, novo_cli], ignore_index=True)
-                conn.create(worksheet="Clientes", data=df_devedores) 
-                st.success("Cadastrado na Planilha!")
-                st.rerun()
+                st.warning("⚠️ Nota: Para adicionar linhas diretamente por um link público, configure uma conta de serviço gspread.")
                 
         st.write("### 💸 Lançar Compra ou Pagamento")
         if not df_devedores.empty and len(df_devedores["Nome"].tolist()) > 0:
@@ -146,14 +150,10 @@ elif menu == "Gestão de Fiados":
             cb1, cb2 = st.columns(2)
             with cb1:
                 if st.button("🔴 Adicionar à Dívida (+ Fiado)", use_container_width=True):
-                    df_devedores.loc[df_devedores["Nome"] == cliente_sel, "Divida"] += val_operacao
-                    conn.create(worksheet="Clientes", data=df_devedores) 
-                    st.rerun()
+                    st.info("Função de alteração disponível em conexões privadas estruturadas.")
             with cb2:
                 if st.button("🟢 Abater Dívida (Cliente Pagou)", use_container_width=True):
-                    df_devedores.loc[df_devedores["Nome"] == cliente_sel, "Divida"] -= val_operacao
-                    conn.create(worksheet="Clientes", data=df_devedores) 
-                    st.rerun()
+                    st.info("Função de alteração disponível em conexões privadas estruturadas.")
         else:
             st.write("Nenhum cliente cadastrado.")
             
@@ -161,9 +161,7 @@ elif menu == "Gestão de Fiados":
         if not df_devedores.empty and len(df_devedores["Nome"].tolist()) > 0:
             cliente_remover = st.selectbox("Selecione para remover:", df_devedores["Nome"].tolist(), key="rem")
             if st.button("🗑️ CONFIRMAR REMOÇÃO", use_container_width=True):
-                df_devedores = df_devedores[df_devedores["Nome"] != cliente_remover].reset_index(drop=True)
-                conn.create(worksheet="Clientes", data=df_devedores) 
-                st.rerun()
+                st.info("A remoção de registros exige credenciais gspread ativas.")
                 
     st.write("---")
     st.write("### Lista Geral de Contas")
@@ -186,17 +184,7 @@ elif menu == "Tabelas de Preço":
             est_min = st.number_input("Mínimo", min_value=0)
             
             if st.button("Cadastrar Produto"):
-                novo_prod = pd.DataFrame([{
-                    "Código": str(cod), 
-                    "Produto": nome_prod, 
-                    "Preço": float(p_varejo), 
-                    "Atacado": float(p_atacado), 
-                    "Estoque": int(est_inicial), 
-                    "Minimo": int(est_min)
-                }])
-                df_produtos = pd.concat([df_produtos, novo_prod], ignore_index=True)
-                conn.create(worksheet="Produtos", data=df_produtos) 
-                st.rerun()
+                st.info("O cadastro de produtos exige credenciais gspread ativas.")
                 
         st.dataframe(df_produtos, use_container_width=True)
         
@@ -204,6 +192,4 @@ elif menu == "Tabelas de Preço":
         if not df_produtos.empty and len(df_produtos["Produto"].tolist()) > 0:
             prod_remover = st.selectbox("Selecione produto para remover:", df_produtos["Produto"].tolist())
             if st.button("🗑️ CONFIRMAR EXCLUSÃO"):
-                df_produtos = df_produtos[df_produtos["Produto"] != prod_remover].reset_index(drop=True)
-                conn.create(worksheet="Produtos", data=df_produtos) 
-                st.rerun()
+                st.info("A exclusão de registros exige credenciais gspread ativas.")
