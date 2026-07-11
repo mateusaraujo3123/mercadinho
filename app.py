@@ -9,33 +9,33 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- CONFIGURAÇÃO INVIOLÁVEL DE MODO CLARO AND PALAVRAS 100% VISÍVEIS ---
+# --- CONFIGURAÇÃO INVIOLÁVEL DE MODO CLARO, BOTÕES LINDOS E ZOOM COMPENSADO ---
 st.markdown("""
     <style>
-    /* Oculta o botão Deploy antigo, o atualizado e o menu do Streamlit */
+    /* Oculta o botão Deploy e o menu padrão do Streamlit */
     .stDeployButton, iframe[title="deploy"], [data-testid="stDeployButton"], button[title="Deploy this app"], #MainMenu {
         display: none !important;
         visibility: hidden !important;
     }
     
-    /* Bloqueia a janela flutuante de anúncio que abre no meio da tela */
+    /* Remove janelas flutuantes de anúncio */
     [role="dialog"], .stModal, div[data-baseweb="modal"] {
         display: none !important;
         visibility: hidden !important;
     }
 
-    /* OBRIGATORIEDADE DO MODO CLARO: Força fundo branco e textos pretos em tudo */
+    /* OBRIGATORIEDADE DO MODO CLARO: Fundo claro e textos escuros */
     html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stSidebar"], [data-testid="stSidebarNav"] {
         background-color: #F8F9FA !important; 
-        color: #000000 !important;
+        color: #222222 !important;
     }
     
-    /* GARANTE TEXTO PRETO INTENSO PARA TODAS AS PALAVRAS FICAREM VISÍVEIS */
-    h1, h2, h3, h4, h5, h6, p, label, span, small, div {
-        color: #000000 !important;
+    /* Garante visibilidade para textos comuns e títulos */
+    h1, h2, h3, h4, h5, h6, p, label, span, small {
+        color: #222222 !important;
     }
     
-    /* Topbar Roxa do topo permanece idêntica ao seu modelo original */
+    /* Topbar Roxa do topo */
     .topbar {
         background-color: #6A1B9A;
         padding: 15px;
@@ -50,14 +50,56 @@ st.markdown("""
         color: white !important;
     }
     
-    /* Cartões brancos do Dashboard com bordas sutis claras */
+    /* NOVO ESTILO DOS BOTÕES ROXOS GRANDES COM LETRA BRANCA (SEM CAIXAS DUPLAS) */
+    div[data-testid="stVerticalBlock"] button[data-testid="baseButton-secondary"],
+    .stButton button {
+        background-color: #6A1B9A !important; /* Roxo sólido e bonito */
+        color: #FFFFFF !important; /* Letras brancas puras */
+        border: none !important; /* Elimina qualquer borda externa */
+        outline: none !important;
+        box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.15) !important;
+        padding: 16px 20px !important;
+        font-weight: bold !important;
+        font-size: 16px !important;
+        border-radius: 8px !important;
+        transition: background-color 0.2s;
+    }
+    
+    /* Remove as caixas, bordas e linhas cinzas internas que enfeiavam os botões */
+    div[data-testid="stVerticalBlock"] button[data-testid="baseButton-secondary"] div,
+    div[data-testid="stVerticalBlock"] button[data-testid="baseButton-secondary"] p,
+    div[data-testid="stVerticalBlock"] button[data-testid="baseButton-secondary"] span,
+    .stButton button div, .stButton button p, .stButton button span {
+        border: none !important;
+        background: transparent !important;
+        color: #FFFFFF !important; /* Força o texto interno a ficar branco */
+        -webkit-text-fill-color: #FFFFFF !important;
+    }
+    
+    /* Efeito ao passar o mouse ou tocar no botão */
+    div[data-testid="stVerticalBlock"] button[data-testid="baseButton-secondary"]:hover,
+    .stButton button:hover {
+        background-color: #4A148C !important;
+        color: #FFFFFF !important;
+    }
+    
+    /* COMPENSAÇÃO DE ZOOM AUTOMÁTICA EM CELULARES */
+    @media (max-width: 768px) {
+        [data-testid="stAppViewContainer"] {
+            transform: scale(0.85) !important; /* Reduz o zoom de tudo para caber na tela */
+            transform-origin: top left !important;
+            width: 117% !important; /* Preenche a largura corretamente */
+        }
+    }
+    
+    /* Cartões brancos do Dashboard */
     .dashboard-card {
         background-color: #FFFFFF !important;
         padding: 20px;
         border-radius: 8px;
         box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.05);
         margin-bottom: 20px;
-        border: 1px solid #CCCCCC !important;
+        border: 1px solid #EAEAEA !important;
     }
     
     /* Alertas de Estoque */
@@ -66,37 +108,24 @@ st.markdown("""
         justify-content: space-between;
         padding: 8px 0;
         border-bottom: 1px solid #EEEEEE;
-        color: #000000 !important;
+        color: #222222 !important;
     }
     .stock-critical {
         color: #D32F2F !important;
         font-weight: bold;
     }
     
-    /* LETRAS PRETAS INTENSAS EM NEGRITO SOBRE OS BOTÕES ROXOS */
-    div.stButton > button, div.stButton > button p, div.stButton > button span {
-        background-color: #BA68C8 !important; /* Roxo claro para dar contraste */
-        color: #000000 !important; /* Letras pretas absolutas */
-        border: 2px solid #4A148C !important;
-        padding: 12px 20px !important;
-        font-weight: 900 !important; /* Força o negrito máximo */
-        border-radius: 8px !important;
-    }
-    div.stButton > button:hover {
-        background-color: #CE93D8 !important;
-    }
-
-    /* Caixas de texto, seletores e inputs travados em fundo branco com borda cinza clara */
+    /* Caixas de entrada de texto e inputs */
     input, select, div[data-baseweb="select"], div[data-baseweb="input"], .stSelectbox {
         background-color: #FFFFFF !important;
-        color: #000000 !important;
-        border: 1px solid #999999 !important;
+        color: #222222 !important;
+        border: 1px solid #CCCCCC !important;
     }
     
-    /* Impede que as tabelas de dados fiquem escuras ou escondam letras */
+    /* Tabelas de dados */
     .stDataFrame div, [data-testid="stTable"] div {
         background-color: #FFFFFF !important;
-        color: #000000 !important;
+        color: #222222 !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -127,7 +156,7 @@ if 'menu_atual' not in st.session_state:
 st.markdown("""
     <div class="topbar">
         <h2 style='margin:0;'>🛍️ MERCADINHO PRO</h2>
-        <span style='font-size:14px;'>🟢 MODO CLARO TOTAL • LETRAS VISÍVEIS</span>
+        <span style='font-size:14px;'>🟢 MODO CLARO TOTAL • ATUALIZADO</span>
     </div>
 """, unsafe_allow_html=True)
 
@@ -158,40 +187,38 @@ st.session_state.menu_atual = menu
 # 1. TELA: DASHBOARD INICIAL
 # ==========================================================
 if menu == "Dashboard Inicial":
-    st.markdown('<h2 style="color: #000000 !important; font-weight: bold;">Fluxo de Fiados & Devedores</h2>', unsafe_allow_html=True)
+    st.markdown('<h2 style="color: #222222 !important; font-weight: bold;">Fluxo de Fiados & Devedores</h2>', unsafe_allow_html=True)
     
     col1, col2 = st.columns(2)
     with col1:
-        st.markdown('<div class="dashboard-card"><h3 style="color:#000000 !important; font-weight: bold;">Top Maiores Devedores (R$)</h3></div>', unsafe_allow_html=True)
+        st.markdown('<div class="dashboard-card"><h3 style="color:#222222 !important; font-weight: bold;">Top Maiores Devedores (R$)</h3></div>', unsafe_allow_html=True)
         if not st.session_state.devedores.empty:
             df_sorted = st.session_state.devedores.sort_values(by="Divida", ascending=True)
             fig = px.bar(df_sorted, x="Divida", y="Nome", orientation='h', color_discrete_sequence=['#6A1B9A'])
-            
-            # CORREÇÃO DO ERRO DO GRÁFICO: Removido o 'width=100' inválido que causava o travamento
             fig.update_layout(
                 paper_bgcolor='rgba(0,0,0,0)', 
                 plot_bgcolor='rgba(0,0,0,0)', 
                 height=300,
-                font=dict(color="#000000", size=14, family="Arial"),
-                xaxis=dict(tickfont=dict(color='#000000', size=12), title_font=dict(color='#000000')),
-                yaxis=dict(tickfont=dict(color='#000000', size=12), title_font=dict(color='#000000'))
+                font=dict(color="#222222", size=14, family="Arial"),
+                xaxis=dict(tickfont=dict(color='#222222', size=12), title_font=dict(color='#222222')),
+                yaxis=dict(tickfont=dict(color='#222222', size=12), title_font=dict(color='#222222'))
             )
             st.plotly_chart(fig, use_container_width=True)
         else:
             st.write("Nenhuma dívida registrada.")
         
     with col2:
-        st.markdown('<div class="dashboard-card"><h3 style="color:#000000 !important; font-weight: bold;">⚠️ Alertas do Estoque</h3></div>', unsafe_allow_html=True)
+        st.markdown('<div class="dashboard-card"><h3 style="color:#222222 !important; font-weight: bold;">⚠️ Alertas do Estoque</h3></div>', unsafe_allow_html=True)
         for _, prod in st.session_state.produtos.iterrows():
             status_class = "stock-critical" if prod['Estoque'] <= prod['Minimo'] else ""
             st.markdown(f"""
                 <div class="stock-alert">
-                    <span style="color:#000000 !important; font-weight: bold;">{prod['Produto']}</span>
+                    <span style="color:#222222 !important; font-weight: bold;">{prod['Produto']}</span>
                     <span class="{status_class}">{prod['Estoque']} / {prod['Minimo']}</span>
                 </div>
             """, unsafe_allow_html=True)
 
-    # Cards de Resumo inferiores em modo claro total
+    # Cards de Resumo inferiores originais em modo claro nativo
     st.write("---")
     c1, c2, c3 = st.columns(3)
     total_fiado = st.session_state.devedores["Divida"].sum()
@@ -205,7 +232,7 @@ if menu == "Dashboard Inicial":
 # 2. TELA: GESTÃO DE FIADOS
 # ==========================================================
 elif menu == "Gestão de Fiados":
-    st.markdown('<div class="dashboard-card"><h2 style="color:#000000 !important;">Local dos Fiados (Controle de Clientes)</h2></div>', unsafe_allow_html=True)
+    st.markdown('<div class="dashboard-card"><h2 style="color:#222222 !important;">Local dos Fiados (Controle de Clientes)</h2></div>', unsafe_allow_html=True)
     
     aba_cad, aba_rem = st.tabs(["➕ Cadastrar Cliente / Lançar", "❌ Remover Pessoa dos Fiados"])
     
@@ -254,7 +281,7 @@ elif menu == "Gestão de Fiados":
 # 3. TELA: TABELAS DE PREÇO
 # ==========================================================
 elif menu == "Tabelas de Preço":
-    st.markdown('<div class="dashboard-card"><h2 style="color:#000000 !important;">Tabelas de Preços e Estoque</h2></div>', unsafe_allow_html=True)
+    st.markdown('<div class="dashboard-card"><h2 style="color:#222222 !important;">Tabelas de Preços e Estoque</h2></div>', unsafe_allow_html=True)
     
     aba_p1, aba_p2 = st.tabs(["📋 Lista de Produtos", "🗑️ Remover Produto"])
     
