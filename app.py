@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import requests
-from streamlit_gsheets import GSheetsConnection
 
 # Configuração estável da página para ocupar a tela toda
 st.set_page_config(
@@ -44,48 +43,49 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- CONEXÃO REAL COM O GOOGLE SHEETS OFICIAL ---
-try:
-    # Usa o conector nativo estável do Streamlit para ler os dados
-    conn = st.connection("gsheets", type=GSheetsConnection)
-    
-    df_devedores = conn.read(worksheet="Clientes", ttl=0)
-    df_produtos = conn.read(worksheet="Produtos", ttl=0)
-    
-    if df_devedores.empty:
-        df_devedores = pd.DataFrame(columns=["Nome", "Telefone", "Limite", "Divida"])
-    if df_produtos.empty:
-        df_produtos = pd.DataFrame(columns=["Código", "Produto", "Preço", "Atacado", "Estoque", "Minimo"])
-        
-    df_devedores["Limite"] = pd.to_numeric(df_devedores["Limite"], errors='coerce').fillna(0.0)
-    df_devedores["Divida"] = pd.to_numeric(df_devedores["Divida"], errors='coerce').fillna(0.0)
-    df_produtos["Preço"] = pd.to_numeric(df_produtos["Preço"], errors='coerce').fillna(0.0)
-    df_produtos["Atacado"] = pd.to_numeric(df_produtos["Atacado"], errors='coerce').fillna(0.0)
-    df_produtos["Estoque"] = pd.to_numeric(df_produtos["Estoque"], errors='coerce').fillna(0).astype(int)
-    df_produtos["Minimo"] = pd.to_numeric(df_produtos["Minimo"], errors='coerce').fillna(0).astype(int)
-
-except Exception as e:
-    st.error("⚠️ Erro de conexão com o Google Sheets:")
-    st.exception(e)
-    st.stop()
-
-# --- FUNÇÃO DE GRAVAÇÃO VIA MACRO WEB APP ---
-def salvar_na_planilha(nome_aba, df_atualizado):
-    """Envia os dados atualizados para a sua Macro do Google salvar instantaneamente."""
+# --- FUNÇÃO CENTRAL DE LEITURA VIA REQUISIÇÃO API MACRO ---
+def ler_da_planilha(nome_aba):
+    """Puxa a tabela estruturada direto da API da sua Macro do Google sem usar connectors."""
     try:
         url_macro = st.secrets["connections"]["gsheets"]["macro_url"]
-        # Organiza as colunas e as linhas em formato de lista simples
+        resposta = requests.get(f"{url_macro}?sheet_name={nome_aba}", timeout=15)
+        matriz = resposta.json()
+        if len(matriz) > 0:
+            return pd.DataFrame(matriz[1:], columns=matriz[0])
+    except Exception:
+        pass
+    # Estruturas de colunas padrões de segurança caso a tabela retorne vazia
+    if nome_aba == "Clientes":
+        return pd.DataFrame(columns=["Nome", "Telefone", "Limite", "Divida"])
+    return pd.DataFrame(columns=["Código", "Produto", "Preço", "Atacado", "Estoque", "Minimo"])
+
+# --- FUNÇÃO CENTRAL DE GRAVAÇÃO VIA REQUISIÇÃO API MACRO ---
+def salvar_na_planilha(nome_aba, df_atualizado):
+    """Envia a matriz estruturada para a sua Macro do Google salvar instantaneamente."""
+    try:
+        url_macro = st.secrets["connections"]["gsheets"]["macro_url"]
         linhas = [df_atualizado.columns.tolist()] + df_atualizado.values.tolist()
         payload = {"sheet_name": nome_aba, "data": linhas}
         requests.post(url_macro, json=payload, timeout=15)
     except Exception as e:
-        st.error(f"Erro ao salvar dados via Macro na aba {nome_aba}: {e}")
+        st.error(f"Erro ao salvar na aba {nome_aba}: {e}")
+
+# --- CARREGAMENTO LIMPO DO BANCO DE DADOS ---
+df_devedores = ler_da_planilha("Clientes")
+df_produtos = ler_da_planilha("Produtos")
+
+df_devedores["Limite"] = pd.to_numeric(df_devedores["Limite"], errors='coerce').fillna(0.0)
+df_devedores["Divida"] = pd.to_numeric(df_devedores["Divida"], errors='coerce').fillna(0.0)
+df_produtos["Preço"] = pd.to_numeric(df_produtos["Preço"], errors='coerce').fillna(0.0)
+df_produtos["Atacado"] = pd.to_numeric(df_produtos["Atacado"], errors='coerce').fillna(0.0)
+df_produtos["Estoque"] = pd.to_numeric(df_produtos["Estoque"], errors='coerce').fillna(0).astype(int)
+df_produtos["Minimo"] = pd.to_numeric(df_produtos["Minimo"], errors='coerce').fillna(0).astype(int)
 
 opcoes_menu = ["Dashboard Inicial", "Gestão de Fiados", "Tabelas de Preço"]
 if 'menu_atual' not in st.session_state:
     st.session_state.menu_atual = "Dashboard Inicial"
 
-st.markdown('<div class="topbar"><h2 style="margin:0; color:white;">🛍️ MERCADINHO PRO</h2><span>🟢 BANCO DE DADOS INTEGRADO ATIVO</span></div>', unsafe_allow_html=True)
+st.markdown('<div class="topbar"><h2 style="margin:0; color:white;">🛍️ MERCADINHO PRO</h2><span>🟢 SISTEMA INTEGRADO ATIVO</span></div>', unsafe_allow_html=True)
 
 col_b1, col_b2, col_b3 = st.columns(3)
 with col_b1:
