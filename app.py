@@ -9,7 +9,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- CONFIGURAÇÃO INVIOLÁVEL DE MODO CLARO, BOTÕES LINDOS E ZOOM COMPENSADO ---
+# --- CONFIGURAÇÃO CLARA RIGOROSA CONTRA TRAVAMENTOS DE TEMA ---
 st.markdown("""
     <style>
     /* Oculta o botão Deploy e o menu padrão do Streamlit */
@@ -24,15 +24,16 @@ st.markdown("""
         visibility: hidden !important;
     }
 
-    /* OBRIGATORIEDADE DO MODO CLARO: Fundo claro e textos escuros */
+    /* MODO CLARO OBRIGATÓRIO EM TUDO: Fundo claro e textos pretos em todas as caixas */
     html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stSidebar"], [data-testid="stSidebarNav"] {
         background-color: #F8F9FA !important; 
-        color: #222222 !important;
+        color: #000000 !important;
     }
     
-    /* Garante visibilidade para textos comuns e títulos */
-    h1, h2, h3, h4, h5, h6, p, label, span, small {
-        color: #222222 !important;
+    /* GARANTE TEXTO PRETO FORTE PARA TODAS AS PALAVRAS FICAREM VISÍVEIS (CORRIGE O SUMIÇO DOS NOMES) */
+    h1, h2, h3, h4, h5, h6, p, label, span, small, th, td, [data-testid="stMarkdownTxt"] {
+        color: #000000 !important;
+        -webkit-text-fill-color: #000000 !important;
     }
     
     /* Topbar Roxa do topo */
@@ -48,47 +49,45 @@ st.markdown("""
     }
     .topbar h2, .topbar span {
         color: white !important;
+        -webkit-text-fill-color: white !important;
     }
     
-    /* NOVO ESTILO DOS BOTÕES ROXOS GRANDES COM LETRA BRANCA (SEM CAIXAS DUPLAS) */
+    /* ESTILO DOS BOTÕES ROXOS GRANDES COM LETRA BRANCA (SEM CAIXAS DUPLAS) */
     div[data-testid="stVerticalBlock"] button[data-testid="baseButton-secondary"],
     .stButton button {
-        background-color: #6A1B9A !important; /* Roxo sólido e bonito */
-        color: #FFFFFF !important; /* Letras brancas puras */
-        border: none !important; /* Elimina qualquer borda externa */
+        background-color: #6A1B9A !important; 
+        color: #FFFFFF !important; 
+        border: none !important; 
         outline: none !important;
         box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.15) !important;
         padding: 16px 20px !important;
         font-weight: bold !important;
         font-size: 16px !important;
         border-radius: 8px !important;
-        transition: background-color 0.2s;
     }
     
-    /* Remove as caixas, bordas e linhas cinzas internas que enfeiavam os botões */
+    /* Garante o texto interno do botão sempre branco */
     div[data-testid="stVerticalBlock"] button[data-testid="baseButton-secondary"] div,
     div[data-testid="stVerticalBlock"] button[data-testid="baseButton-secondary"] p,
     div[data-testid="stVerticalBlock"] button[data-testid="baseButton-secondary"] span,
     .stButton button div, .stButton button p, .stButton button span {
         border: none !important;
         background: transparent !important;
-        color: #FFFFFF !important; /* Força o texto interno a ficar branco */
+        color: #FFFFFF !important; 
         -webkit-text-fill-color: #FFFFFF !important;
     }
     
-    /* Efeito ao passar o mouse ou tocar no botão */
     div[data-testid="stVerticalBlock"] button[data-testid="baseButton-secondary"]:hover,
     .stButton button:hover {
         background-color: #4A148C !important;
-        color: #FFFFFF !important;
     }
     
     /* COMPENSAÇÃO DE ZOOM AUTOMÁTICA EM CELULARES */
     @media (max-width: 768px) {
         [data-testid="stAppViewContainer"] {
-            transform: scale(0.85) !important; /* Reduz o zoom de tudo para caber na tela */
+            transform: scale(0.85) !important; 
             transform-origin: top left !important;
-            width: 117% !important; /* Preenche a largura corretamente */
+            width: 117% !important; 
         }
     }
     
@@ -99,7 +98,7 @@ st.markdown("""
         border-radius: 8px;
         box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.05);
         margin-bottom: 20px;
-        border: 1px solid #EAEAEA !important;
+        border: 1px solid #CCCCCC !important;
     }
     
     /* Alertas de Estoque */
@@ -108,24 +107,29 @@ st.markdown("""
         justify-content: space-between;
         padding: 8px 0;
         border-bottom: 1px solid #EEEEEE;
-        color: #222222 !important;
+        color: #000000 !important;
     }
     .stock-critical {
         color: #D32F2F !important;
         font-weight: bold;
     }
     
-    /* Caixas de entrada de texto e inputs */
-    input, select, div[data-baseweb="select"], div[data-baseweb="input"], .stSelectbox {
+    /* CORREÇÃO DO CAIXA ESCURO: Inputs e caixas de texto com fundo branco e texto preto */
+    input, select, div[data-baseweb="select"], div[data-baseweb="input"], .stSelectbox, div[role="listbox"] {
         background-color: #FFFFFF !important;
-        color: #222222 !important;
-        border: 1px solid #CCCCCC !important;
+        color: #000000 !important;
+        border: 1px solid #999999 !important;
     }
     
-    /* Tabelas de dados */
-    .stDataFrame div, [data-testid="stTable"] div {
+    /* CORREÇÃO DA TABELA BRANCA: Força as linhas e letras da tabela a ficarem escuras e legíveis */
+    .stDataFrame, [data-testid="stTable"], div[class*="stDataFrame"] {
         background-color: #FFFFFF !important;
-        color: #222222 !important;
+        color: #000000 !important;
+    }
+    .stDataFrame div, [data-testid="stTable"] div, .stDataFrame span, [data-testid="stTable"] td {
+        background-color: #FFFFFF !important;
+        color: #000000 !important;
+        -webkit-text-fill-color: #000000 !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -156,7 +160,7 @@ if 'menu_atual' not in st.session_state:
 st.markdown("""
     <div class="topbar">
         <h2 style='margin:0;'>🛍️ MERCADINHO PRO</h2>
-        <span style='font-size:14px;'>🟢 MODO CLARO TOTAL • ATUALIZADO</span>
+        <span style='font-size:14px;'>🟢 MODO CLARO INTEGRAL • AJUSTADO</span>
     </div>
 """, unsafe_allow_html=True)
 
@@ -187,11 +191,11 @@ st.session_state.menu_atual = menu
 # 1. TELA: DASHBOARD INICIAL
 # ==========================================================
 if menu == "Dashboard Inicial":
-    st.markdown('<h2 style="color: #222222 !important; font-weight: bold;">Fluxo de Fiados & Devedores</h2>', unsafe_allow_html=True)
+    st.markdown('<h2 style="color: #000000 !important; font-weight: bold;">Fluxo de Fiados & Devedores</h2>', unsafe_allow_html=True)
     
     col1, col2 = st.columns(2)
     with col1:
-        st.markdown('<div class="dashboard-card"><h3 style="color:#222222 !important; font-weight: bold;">Top Maiores Devedores (R$)</h3></div>', unsafe_allow_html=True)
+        st.markdown('<div class="dashboard-card"><h3 style="color:#000000 !important; font-weight: bold;">Top Maiores Devedores (R$)</h3></div>', unsafe_allow_html=True)
         if not st.session_state.devedores.empty:
             df_sorted = st.session_state.devedores.sort_values(by="Divida", ascending=True)
             fig = px.bar(df_sorted, x="Divida", y="Nome", orientation='h', color_discrete_sequence=['#6A1B9A'])
@@ -199,26 +203,25 @@ if menu == "Dashboard Inicial":
                 paper_bgcolor='rgba(0,0,0,0)', 
                 plot_bgcolor='rgba(0,0,0,0)', 
                 height=300,
-                font=dict(color="#222222", size=14, family="Arial"),
-                xaxis=dict(tickfont=dict(color='#222222', size=12), title_font=dict(color='#222222')),
-                yaxis=dict(tickfont=dict(color='#222222', size=12), title_font=dict(color='#222222'))
+                font=dict(color="#000000", size=14, family="Arial"),
+                xaxis=dict(tickfont=dict(color='#000000', size=12), title_font=dict(color='#000000')),
+                yaxis=dict(tickfont=dict(color='#000000', size=12), title_font=dict(color='#000000'))
             )
             st.plotly_chart(fig, use_container_width=True)
         else:
             st.write("Nenhuma dívida registrada.")
         
     with col2:
-        st.markdown('<div class="dashboard-card"><h3 style="color:#222222 !important; font-weight: bold;">⚠️ Alertas do Estoque</h3></div>', unsafe_allow_html=True)
+        st.markdown('<div class="dashboard-card"><h3 style="color:#000000 !important; font-weight: bold;">⚠️ Alertas do Estoque</h3></div>', unsafe_allow_html=True)
         for _, prod in st.session_state.produtos.iterrows():
             status_class = "stock-critical" if prod['Estoque'] <= prod['Minimo'] else ""
             st.markdown(f"""
                 <div class="stock-alert">
-                    <span style="color:#222222 !important; font-weight: bold;">{prod['Produto']}</span>
+                    <span style="color:#000000 !important; font-weight: bold;">{prod['Produto']}</span>
                     <span class="{status_class}">{prod['Estoque']} / {prod['Minimo']}</span>
                 </div>
             """, unsafe_allow_html=True)
 
-    # Cards de Resumo inferiores originais em modo claro nativo
     st.write("---")
     c1, c2, c3 = st.columns(3)
     total_fiado = st.session_state.devedores["Divida"].sum()
@@ -232,7 +235,7 @@ if menu == "Dashboard Inicial":
 # 2. TELA: GESTÃO DE FIADOS
 # ==========================================================
 elif menu == "Gestão de Fiados":
-    st.markdown('<div class="dashboard-card"><h2 style="color:#222222 !important;">Local dos Fiados (Controle de Clientes)</h2></div>', unsafe_allow_html=True)
+    st.markdown('<div class="dashboard-card"><h2 style="color:#000000 !important;">Local dos Fiados (Controle de Clientes)</h2></div>', unsafe_allow_html=True)
     
     aba_cad, aba_rem = st.tabs(["➕ Cadastrar Cliente / Lançar", "❌ Remover Pessoa dos Fiados"])
     
@@ -281,7 +284,7 @@ elif menu == "Gestão de Fiados":
 # 3. TELA: TABELAS DE PREÇO
 # ==========================================================
 elif menu == "Tabelas de Preço":
-    st.markdown('<div class="dashboard-card"><h2 style="color:#222222 !important;">Tabelas de Preços e Estoque</h2></div>', unsafe_allow_html=True)
+    st.markdown('<div class="dashboard-card"><h2 style="color:#000000 !important;">Tabelas de Preços e Estoque</h2></div>', unsafe_allow_html=True)
     
     aba_p1, aba_p2 = st.tabs(["📋 Lista de Produtos", "🗑️ Remover Produto"])
     
