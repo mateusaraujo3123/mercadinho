@@ -72,8 +72,8 @@ try:
     df_produtos["Minimo"] = pd.to_numeric(df_produtos["Minimo"], errors='coerce').fillna(0).astype(int)
 
 except Exception as e:
-    st.error("⚠️ Ocorreu um erro real na conexão:")
-    st.exception(e)
+    st.error("⚠️ Ocorreu um erro interno no processamento dos dados:")
+    st.exception(e)  # Expõe o relatório detalhado do Python na tela
     st.stop()
 
 opcoes_menu = ["Dashboard Inicial", "Gestão de Fiados", "Tabelas de Preço"]
