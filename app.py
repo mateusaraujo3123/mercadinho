@@ -71,12 +71,12 @@ except Exception as e:
     st.exception(e)
     st.stop()
 
-# --- FUNÇÃO DE GRAVAÇÃO VIA MACRO WEB APP ---
+# --- FUNÇÃO CORRIGIDA DE GRAVAÇÃO VIA MACRO WEB APP (SEM ERRO DE SPLIT) ---
 def salvar_na_planilha(nome_aba, df_atualizado):
-    """Envia a tabela estruturada para a Macro salvar de forma assíncrona."""
+    """Envia a tabela estruturada diretamente para a URL da Macro do Google."""
     try:
         url_macro = st.secrets["connections"]["gsheets"]["macro_url"]
-        # Prepara a matriz contendo o cabeçalho e os valores
+        # Organiza os dados em formato de matriz pura para o JavaScript ler
         linhas = [df_atualizado.columns.tolist()] + df_atualizado.values.tolist()
         payload = {"sheet_name": nome_aba, "data": linhas}
         requests.post(url_macro, json=payload, timeout=15)
