@@ -43,34 +43,36 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- FUNÇÃO CENTRAL DE LEITURA VIA REQUISIÇÃO API MACRO ---
+# --- FUNÇÃO CENTRAL DE LEITURA VIA API DA SUA MACRO ---
 def ler_da_planilha(nome_aba):
-    """Puxa a tabela estruturada direto da API da sua Macro do Google sem usar connectors."""
+    """Busca a matriz de dados estruturada direto do link da sua Macro Google."""
     try:
         url_macro = st.secrets["connections"]["gsheets"]["macro_url"]
         resposta = requests.get(f"{url_macro}?sheet_name={nome_aba}", timeout=15)
         matriz = resposta.json()
         if len(matriz) > 0:
+            # Transforma a resposta do JavaScript em um DataFrame do Pandas usando a linha 0 como cabeçalho
             return pd.DataFrame(matriz[1:], columns=matriz[0])
     except Exception:
         pass
-    # Estruturas de colunas padrões de segurança caso a tabela retorne vazia
+    # Tabelas reservas vazias com cabeçalhos estruturados para evitar falhas no código
     if nome_aba == "Clientes":
         return pd.DataFrame(columns=["Nome", "Telefone", "Limite", "Divida"])
     return pd.DataFrame(columns=["Código", "Produto", "Preço", "Atacado", "Estoque", "Minimo"])
 
-# --- FUNÇÃO CENTRAL DE GRAVAÇÃO VIA REQUISIÇÃO API MACRO ---
+# --- FUNÇÃO CENTRAL DE GRAVAÇÃO VIA API DA SUA MACRO ---
 def salvar_na_planilha(nome_aba, df_atualizado):
-    """Envia a matriz estruturada para a sua Macro do Google salvar instantaneamente."""
+    """Envia os DataFrames novos no formato de matriz para a sua Macro reescrever as linhas."""
     try:
         url_macro = st.secrets["connections"]["gsheets"]["macro_url"]
+        # Junta os cabeçalhos com as listas de linhas da tabela
         linhas = [df_atualizado.columns.tolist()] + df_atualizado.values.tolist()
         payload = {"sheet_name": nome_aba, "data": linhas}
         requests.post(url_macro, json=payload, timeout=15)
     except Exception as e:
-        st.error(f"Erro ao salvar na aba {nome_aba}: {e}")
+        st.error(f"Erro ao transmitir os dados para a aba {nome_aba}: {e}")
 
-# --- CARREGAMENTO LIMPO DO BANCO DE DADOS ---
+# --- SINCRONIZAÇÃO AUTOMÁTICA DO BANCO DE DADOS ---
 df_devedores = ler_da_planilha("Clientes")
 df_produtos = ler_da_planilha("Produtos")
 
@@ -85,7 +87,7 @@ opcoes_menu = ["Dashboard Inicial", "Gestão de Fiados", "Tabelas de Preço"]
 if 'menu_atual' not in st.session_state:
     st.session_state.menu_atual = "Dashboard Inicial"
 
-st.markdown('<div class="topbar"><h2 style="margin:0; color:white;">🛍️ MERCADINHO PRO</h2><span>🟢 SISTEMA INTEGRADO ATIVO</span></div>', unsafe_allow_html=True)
+st.markdown('<div class="topbar"><h2 style="margin:0; color:white;">🛍️ MERCADINHO PRO</h2><span>🟢 CONEXÃO PROFISSIONAL ATIVA</span></div>', unsafe_allow_html=True)
 
 col_b1, col_b2, col_b3 = st.columns(3)
 with col_b1:
