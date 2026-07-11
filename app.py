@@ -2,25 +2,16 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 
-# Configuração da página para ocupar a tela toda
+# Configuração da página para ocupar a tela toda de forma limpa e nativa
 st.set_page_config(
     page_title="SIGE Lite - Mercadinho", 
     layout="wide", 
     initial_sidebar_state="expanded"
 )
 
-# --- CONFIGURAÇÃO DE ESTILO FIXO, LEITURA DOS NOMES E ZOOM MOBILE ---
+# --- CONFIGURAÇÃO RIGOROSA DE MODO CLARO E TEXTOS VISÍVEIS (CSS SEGURO) ---
 st.markdown("""
     <style>
-    /* AJUSTE FORÇADO DE ZOOM APENAS PARA CELULARES */
-    @media (max-width: 768px) {
-        [data-testid="stAppViewContainer"] {
-            transform: scale(0.9) !important;
-            transform-origin: top left !important;
-            width: 111% !important; /* Compensa o encolhimento para não sobrar espaço branco */
-        }
-    }
-    
     /* Oculta o botão Deploy antigo, o atualizado e o menu do Streamlit */
     .stDeployButton, iframe[title="deploy"], [data-testid="stDeployButton"], button[title="Deploy this app"], #MainMenu {
         display: none !important;
@@ -33,7 +24,7 @@ st.markdown("""
         visibility: hidden !important;
     }
 
-    /* Força fundo branco e textos escuros em tudo */
+    /* EXCLUSÃO DO DARK MODE: Força fundo branco e textos escuros em tudo */
     html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stSidebar"], [data-testid="stSidebarNav"] {
         background-color: #F8F9FA !important; 
         color: #333333 !important;
@@ -59,22 +50,20 @@ st.markdown("""
         color: white !important;
     }
     
-    /* CORREÇÃO DO TEXTO APAGADO: Alvo direto na estrutura interna do botão do Streamlit */
-    div[data-testid="stVerticalBlock"] button[data-testid="baseButton-secondary"],
-    div[data-testid="stVerticalBlock"] button[data-testid="baseButton-secondary"] p,
-    div[data-testid="stVerticalBlock"] button[data-testid="baseButton-secondary"] span,
+    /* FIXAÇÃO DO TEXTO BRANCO: Alvo universal para injetar a cor branca no texto dos botões roxos */
+    button[data-testid="baseButton-secondary"], 
+    button[data-testid="baseButton-secondary"] p, 
+    button[data-testid="baseButton-secondary"] span,
     .stButton button, .stButton button p {
         background-color: #4A148C !important;
-        color: #FFFFFF !important; /* Cor Branca Absoluta e Forçada */
-        -webkit-text-fill-color: #FFFFFF !important; /* Força em iPhones e Safari */
+        color: #FFFFFF !important; /* Letras Brancas Fortes */
         border: 1px solid #7B1FA2 !important;
         padding: 12px 20px !important;
         font-weight: bold !important;
         border-radius: 8px !important;
-        opacity: 1 !important;
     }
     
-    div[data-testid="stVerticalBlock"] button[data-testid="baseButton-secondary"]:hover {
+    button[data-testid="baseButton-secondary"]:hover {
         background-color: #7B1FA2 !important;
         color: #FFFFFF !important;
     }
@@ -105,14 +94,14 @@ st.markdown("""
         font-weight: bold;
     }
     
-    /* Caixas de texto, seletores e inputs */
+    /* Caixas de texto, seletores e inputs travados em fundo branco com borda cinza */
     input, select, div[data-baseweb="select"], div[data-baseweb="input"], .stSelectbox {
         background-color: #FFFFFF !important;
         color: #333333 !important;
         border: 1px solid #CCCCCC !important;
     }
     
-    /* Tabelas de dados */
+    /* Ajuste para as tabelas de dados (Dataframes) não escurecerem */
     .stDataFrame div {
         background-color: #FFFFFF !important;
         color: #333333 !important;
@@ -120,7 +109,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- SIMULAÇÃO DE BANCO DE DADOS EM MEMÓRIA ---
+# --- RECURSO DE DADOS EM MEMÓRIA ---
 if 'devedores' not in st.session_state:
     st.session_state.devedores = pd.DataFrame([
         {"Nome": "João Silva", "Telefone": "11999999999", "Limite": 500.0, "Divida": 350.0},
@@ -146,11 +135,11 @@ if 'menu_atual' not in st.session_state:
 st.markdown("""
     <div class="topbar">
         <h2 style='margin:0;'>🛍️ MERCADINHO PRO</h2>
-        <span style='font-size:14px;'>🟢 MODO CLARO OBRIGATÓRIO • ATUALIZADO</span>
+        <span style='font-size:14px;'>🟢 MODO CLARO OBRIGATÓRIO • ATUALIZADO DE FORMA SEGURA</span>
     </div>
 """, unsafe_allow_html=True)
 
-# Botões superiores alinhados
+# Botões superiores alinhados por colunas individuais
 col_b1, col_b2, col_b3 = st.columns(3)
 with col_b1:
     if st.button("👥 PESSOAS", use_container_width=True):
