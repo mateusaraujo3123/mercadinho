@@ -2,52 +2,72 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 
-# Configuração estável da página para ocupar a tela toda
+# Configuração da página para ocupar a tela toda
 st.set_page_config(
     page_title="SIGE Lite - Mercadinho", 
     layout="wide", 
     initial_sidebar_state="expanded"
 )
 
-# --- CONFIGURAÇÃO VISUAL LIMPA E NATIVA ---
+# --- ESTILIZAÇÃO CSS ORIGINAL (Com correção segura de cores para os botões) ---
 st.markdown("""
     <style>
-    /* Oculta apenas o botão Deploy e o menu de três pontos */
+    /* Oculta o botão Deploy antigo e o menu padrão */
     .stDeployButton, #MainMenu {
         display: none !important;
     }
-    /* Estilização para deixar o Cabeçalho Roxo idêntico ao modelo original */
+    
+    /* Fundo geral claro original */
+    .stApp {
+        background-color: #F8F9FA;
+    }
+    
+    /* Topbar Roxa */
     .topbar {
         background-color: #6A1B9A;
         padding: 15px;
         border-radius: 8px;
-        color: white !important;
+        color: white;
         margin-bottom: 20px;
         display: flex;
         justify-content: space-between;
         align-items: center;
     }
-    .topbar h2, .topbar span {
-        color: white !important;
-    }
-    /* Moldura para os blocos do painel */
+    
+    /* Cartões brancos do Dashboard */
     .dashboard-card {
-        background-color: #FFFFFF !important;
+        background-color: white;
         padding: 20px;
         border-radius: 8px;
         box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.05);
         margin-bottom: 20px;
-        border: 1px solid #EAEAEA;
+        border-top: 4px solid #6A1B9A;
     }
+    
+    /* Alertas de Estoque */
     .stock-alert {
         display: flex;
         justify-content: space-between;
         padding: 8px 0;
         border-bottom: 1px solid #EEEEEE;
+        color: #333333;
     }
     .stock-critical {
-        color: #D32F2F !important;
+        color: #D32F2F;
         font-weight: bold;
+    }
+    
+    /* CORREÇÃO DOS TEXTOS APAGADOS: Letras pretas em negrito sobre o fundo roxo */
+    div.stButton > button {
+        background-color: #BA68C8 !important; /* Roxo ligeiramente mais claro para dar contraste */
+        color: #000000 !important; /* Letras pretas intensas para legibilidade absoluta */
+        border: 2px solid #4A148C !important;
+        padding: 12px 20px !important;
+        font-weight: 900 !important; /* Força o negrito máximo */
+        border-radius: 8px !important;
+    }
+    div.stButton > button:hover {
+        background-color: #CE93D8 !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -74,33 +94,32 @@ opcoes_menu = ["Dashboard Inicial", "Gestão de Fiados", "Tabelas de Preço"]
 if 'menu_atual' not in st.session_state:
     st.session_state.menu_atual = "Dashboard Inicial"
 
-# --- HEADER SUPERIOR ROXO ---
+# --- HEADER SUPERIOR ESTILO SIGELITE ---
 st.markdown("""
     <div class="topbar">
-        <h2 style='margin:0;'>🛍️ MERCADINHO PRO</h2>
-        <span style='font-size:14px;'>🟢 SISTEMA ONLINE • OPERAÇÃO DIRETA</span>
+        <h2 style='margin:0; color:white;'>🛍️ MERCADINHO PRO</h2>
+        <span style='font-size:14px;'>🟢 SISTEMA ONLINE • ENTRADA DIRETA</span>
     </div>
 """, unsafe_allow_html=True)
 
-# BOTÕES DE NAVEGAÇÃO NATIVOS E DE ALTA VISIBILIDADE
-st.write("### 🧭 Atalhos Rápidos do Painel:")
+# BOTÕES DO TOPO (Modificados para usar colunas diretas estáveis)
 col_b1, col_b2, col_b3 = st.columns(3)
 with col_b1:
-    if st.button("👥 IR PARA: GESTÃO DE FIADOS (PESSOAS)", use_container_width=True):
+    if st.button("👥 PESSOAS", use_container_width=True):
         st.session_state.menu_atual = "Gestão de Fiados"
         st.rerun()
 with col_b2:
-    if st.button("📦 IR PARA: TABELAS DE PREÇO (PRODUTOS)", use_container_width=True):
+    if st.button("📦 PRODUTOS", use_container_width=True):
         st.session_state.menu_atual = "Tabelas de Preço"
         st.rerun()
 with col_b3:
-    if st.button("📈 IR PARA: CONTAS A RECEBER", use_container_width=True):
+    if st.button("📈 CONTAS A RECEBER", use_container_width=True):
         st.session_state.menu_atual = "Gestão de Fiados"
         st.rerun()
 
 st.write("---")
 
-# --- BARRA LATERAL ---
+# --- BARRA LATERAL ORIGINAL ---
 st.sidebar.title("🏪 Menu Mercadinho")
 st.sidebar.write("---")
 indice_padrao = opcoes_menu.index(st.session_state.menu_atual) if st.session_state.menu_atual in opcoes_menu else 0
@@ -110,11 +129,11 @@ st.session_state.menu_atual = menu
 # 1. TELA: DASHBOARD INICIAL
 # ==========================================================
 if menu == "Dashboard Inicial":
-    st.write("## Fluxo de Fiados & Devedores")
+    st.markdown('<h2 style="color: #333333;">Fluxo de Fiados & Devedores</h2>', unsafe_allow_html=True)
     
     col1, col2 = st.columns(2)
     with col1:
-        st.markdown('<div class="dashboard-card"><h3>Top Maiores Devedores (R$)</h3></div>', unsafe_allow_html=True)
+        st.markdown('<div class="dashboard-card"><h3 style="color:#333;">Top Maiores Devedores (R$)</h3></div>', unsafe_allow_html=True)
         if not st.session_state.devedores.empty:
             df_sorted = st.session_state.devedores.sort_values(by="Divida", ascending=True)
             fig = px.bar(df_sorted, x="Divida", y="Nome", orientation='h', color_discrete_sequence=['#6A1B9A'])
@@ -124,7 +143,7 @@ if menu == "Dashboard Inicial":
             st.write("Nenhuma dívida registrada.")
         
     with col2:
-        st.markdown('<div class="dashboard-card"><h3>⚠️ Alertas do Estoque</h3></div>', unsafe_allow_html=True)
+        st.markdown('<div class="dashboard-card"><h3 style="color:#333;">⚠️ Alertas do Estoque</h3></div>', unsafe_allow_html=True)
         for _, prod in st.session_state.produtos.iterrows():
             status_class = "stock-critical" if prod['Estoque'] <= prod['Minimo'] else ""
             st.markdown(f"""
@@ -134,20 +153,21 @@ if menu == "Dashboard Inicial":
                 </div>
             """, unsafe_allow_html=True)
 
+    # Cards de Resumo inferiores originais
     st.write("---")
     c1, c2, c3 = st.columns(3)
     total_fiado = st.session_state.devedores["Divida"].sum()
     clientes_atraso = len(st.session_state.devedores[st.session_state.devedores["Divida"] > st.session_state.devedores["Limite"]])
     
-    with c1: st.metric(label="Soma Total de Fiados", value=f"R$ {total_fiado:,.2f}")
-    with c2: st.metric(label="Clientes Acima do Limite", value=clientes_atraso)
-    with c3: st.metric(label="Caixa Estimado do Dia", value="R$ 1.250,00")
+    with c1: st.metric(label="Soma Total de Fiados", value=f"R$ {total_fiado:,.2f}", delta="A receber", delta_color="inverse")
+    with c2: st.metric(label="Clientes Acima do Limite", value=clientes_atraso, delta="Crítico", delta_color="inverse")
+    with c3: st.metric(label="Caixa Estimado do Dia", value="R$ 1.250,00", delta="+15% ontem")
 
 # ==========================================================
 # 2. TELA: GESTÃO DE FIADOS
 # ==========================================================
 elif menu == "Gestão de Fiados":
-    st.markdown('<div class="dashboard-card"><h2>Local dos Fiados (Controle de Clientes)</h2></div>', unsafe_allow_html=True)
+    st.markdown('<div class="dashboard-card"><h2 style="color:#333;">Local dos Fiados (Controle de Clientes)</h2></div>', unsafe_allow_html=True)
     
     aba_cad, aba_rem = st.tabs(["➕ Cadastrar Cliente / Lançar", "❌ Remover Pessoa dos Fiados"])
     
@@ -196,7 +216,7 @@ elif menu == "Gestão de Fiados":
 # 3. TELA: TABELAS DE PREÇO
 # ==========================================================
 elif menu == "Tabelas de Preço":
-    st.markdown('<div class="dashboard-card"><h2>Tabelas de Preços e Estoque</h2></div>', unsafe_allow_html=True)
+    st.markdown('<div class="dashboard-card"><h2 style="color:#333;">Tabelas de Preços e Estoque</h2></div>', unsafe_allow_html=True)
     
     aba_p1, aba_p2 = st.tabs(["📋 Lista de Produtos", "🗑️ Remover Produto"])
     
