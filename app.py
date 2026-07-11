@@ -58,24 +58,27 @@ def ler_da_planilha(nome_aba):
         return pd.DataFrame(columns=["Nome", "Telefone", "Limite", "Divida"])
     return pd.DataFrame(columns=["Código", "Produto", "Preço", "Atacado", "Estoque", "Minimo"])
 
-# --- FUNÇÃO CENTRAL DE GRAVAÇÃO VIA API DA SUA MACRO ---
+# --- FUNÇÃO CENTRAL DE GRAVAÇÃO TOTALMENTE CORRIGIDA ---
 def salvar_na_planilha(nome_aba, df_atualizado):
-    """Envia a matriz de dados normalizada para evitar travamento de tipos do Pandas."""
+    """Envia a matriz de dados limpa diretamente para a Macro do Google."""
     try:
         url_macro = st.secrets["connections"]["gsheets"]["macro_url"]
         
-        # Garante que o telefone e códigos sejam salvos estritamente como texto puro
+        # Garante que as colunas de identificadores sejam tratadas como strings
         if "Telefone" in df_atualizado.columns:
             df_atualizado["Telefone"] = df_atualizado["Telefone"].astype(str)
         if "Código" in df_atualizado.columns:
             df_atualizado["Código"] = df_atualizado["Código"].astype(str)
             
+        # Converte a matriz para tipos primitivos nativos aceitos pelo JSON
         matriz_pura = df_atualizado.astype(object).where(pd.notnull(df_atualizado), None).values.tolist()
         linhas = [df_atualizado.columns.tolist()] + matriz_pura
-        payload = {"sheet_name": nome_aba, "data": linhas}
         
+        payload = {"sheet_name": nome_aba, "data": linhas}
         headers = {"Content-Type": "application/json"}
-        requests.post(url_macro, json=payload, headers=headers, allow_redirects=True, timeout=15)
+        
+        # Faz o envio direto
+        requests.post(url_macro, json=payload, headers=headers, timeout=15)
     except Exception as e:
         st.error(f"Erro ao salvar na aba {nome_aba}: {e}")
 
@@ -83,7 +86,6 @@ def salvar_na_planilha(nome_aba, df_atualizado):
 df_devedores = ler_da_planilha("Clientes")
 df_produtos = ler_da_planilha("Produtos")
 
-# Força o telefone a carregar como texto para o Streamlit não bugar visualmente
 df_devedores["Telefone"] = df_devedores["Telefone"].astype(str).replace(r'\.0$', '', regex=True)
 df_devedores["Limite"] = pd.to_numeric(df_devedores["Limite"], errors='coerce').fillna(0.0)
 df_devedores["Divida"] = pd.to_numeric(df_devedores["Divida"], errors='coerce').fillna(0.0)
@@ -153,15 +155,10 @@ elif menu == "Gestão de Fiados":
     with aba_cad:
         with st.expander("➕ Cadastrar Novo Cliente"):
             nome = st.text_input("Nome do Cliente")
-            
-            # PROTEÇÃO DO TELEFONE: Força o input a tratar o valor como texto puro na digitação
-            tel = st.text_input("Telefone", key="input_telefone_limpo", value="", help="Digite apenas os números com DDD")
-            
+            tel = st.text_input("Telefone", value="")
             limite = st.number_input("Limite (R$)", min_value=0.0, value=200.0)
             if st.button("Salvar Cliente"):
-                # Limpa e remove pontos flutuantes do telefone antes de concatenar
-                tel_texto = str(tel).strip().split('.')[0]
-                novo_cli = pd.DataFrame([{"Nome": nome, "Telefone": tel_texto, "Limite": float(limite), "Divida": 0.0}])
+                novo_cli = pd.DataFrame([{"Nome": nome, "Telefone": str(tel).strip(), "Limite": float(limite), "Divida": 0.0}])
                 df_devedores = pd.concat([df_devedores, novo_cli], ignore_index=True)
                 salvar_na_planilha("Clientes", df_devedores)
                 st.success("Salvo com sucesso!")
@@ -215,7 +212,7 @@ elif menu == "Tabelas de Preço":
             
             if st.button("Cadastrar Produto"):
                 novo_prod = pd.DataFrame([{
-                    "Código": str(cod).strip().split('.')[0], 
+                    "Código": str(cod).strip(), 
                     "Produto": nome_prod, 
                     "Preço": float(p_varejo), 
                     "Atacado": float(p_atacado), 
