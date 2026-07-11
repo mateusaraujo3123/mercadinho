@@ -1,3 +1,2 @@
-streamlit-gsheets
+git+https://github.com/streamlit/gsheets-connection
 plotly
-openpyxl
