@@ -114,13 +114,13 @@ if not st.session_state.usuario_logado:
     st.markdown("<h2 style='text-align: center; color: #6A1B9A; margin-top: 50px;'>🔒 Login Único - Mercadinho Pro</h2>", unsafe_allow_html=True)
     st.markdown("<p style='text-align: center; color: #666;'>O sistema lembrará deste aparelho após o primeiro acesso.</p>", unsafe_allow_html=True)
     
-    col_login, _ = st.columns()
+    # CORREÇÃO DEFINITIVA: Centraliza os campos de login informando 3 colunas
+    col_esq, col_login, col_dir = st.columns([1, 2, 1])
     with col_login:
         usuario_input = st.text_input("Usuário:")
         senha_input = st.text_input("Senha:", type="password")
         
         if st.button("Entrar e Lembrar Dispositivo", use_container_width=True):
-            # ADICIONADO: Seus dados de acesso personalizados
             if usuario_input == "marcio" and senha_input == "marcio":
                 st.session_state.usuario_logado = True
                 st.success("Aparelho autorizado com sucesso!")
