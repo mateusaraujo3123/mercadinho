@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import requests
 
 # Configuração estável da página para ocupar a tela toda
 st.set_page_config(
@@ -43,11 +42,11 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- CONEXÃO 100% PURA VIA PANDAS (IMUNE A COMPLICAÇÕES) ---
+# --- CONEXÃO 100% BLINDADA VIA LINKS DE EXPORTAÇÃO CSV PADRÃO GOOGLE ---
 try:
     id_planilha = "1Wmf92fjhBcgZwnrgi_Zme1XiZM4acAn27eBsNHrKgFg"
-    url_clientes = f"https://google.com{id_planilha}/gviz/tq?tqx=out:csv&sheet=Clientes"
-    url_produtos = f"https://google.com{id_planilha}/gviz/tq?tqx=out:csv&sheet=Produtos"
+    url_clientes = f"https://google.com{id_planilha}/export?format=csv&sheet=Clientes"
+    url_produtos = f"https://google.com{id_planilha}/export?format=csv&sheet=Produtos"
     
     df_devedores = pd.read_csv(url_clientes)
     df_produtos = pd.read_csv(url_produtos)
@@ -65,23 +64,15 @@ try:
     df_produtos["Minimo"] = pd.to_numeric(df_produtos["Minimo"], errors='coerce').fillna(0).astype(int)
 
 except Exception as e:
-    st.error("⚠️ Falha ao ler os dados atuais do Google Sheets. Verifique a planilha.")
+    st.error("⚠️ Falha crítica ao acessar as abas. Verifique se os nomes estão corretos.")
+    st.exception(e)
     st.stop()
-
-# --- NOVA FUNÇÃO DE GRAVAÇÃO VIA APPS SCRIPT DE FORMULÁRIO (BLINDADA) ---
-def adicionar_registro_web(nome_aba, dados_lista):
-    """Envia uma única requisição estável para inserir uma linha na planilha."""
-    try:
-        url_macro = st.secrets["connections"]["gsheets"]["macro_url"]
-        requests.get(f"{url_macro}?action=add&sheet_name={nome_aba}&row_data={','.join(map(str, dados_lista))}", timeout=15)
-    except Exception:
-        pass
 
 opcoes_menu = ["Dashboard Inicial", "Gestão de Fiados", "Tabelas de Preço"]
 if 'menu_atual' not in st.session_state:
     st.session_state.menu_atual = "Dashboard Inicial"
 
-st.markdown('<div class="topbar"><h2 style="margin:0; color:white;">🛍️ MERCADINHO PRO</h2><span>🟢 CONEXÃO ESTÁVEL ATIVA</span></div>', unsafe_allow_html=True)
+st.markdown('<div class="topbar"><h2 style="margin:0; color:white;">🛍️ MERCADINHO PRO</h2><span>🟢 BANCO DE DADOS ONLINE</span></div>', unsafe_allow_html=True)
 
 col_b1, col_b2, col_b3 = st.columns(3)
 with col_b1:
@@ -133,42 +124,14 @@ if menu == "Dashboard Inicial":
 # ==========================================================
 elif menu == "Gestão de Fiados":
     st.markdown('<div class="dashboard-card"><h2>Local dos Fiados (Controle de Clientes)</h2></div>', unsafe_allow_html=True)
-    aba_cad, aba_rem = st.tabs(["➕ Cadastrar Cliente / Lançar", "❌ Remover Pessoa dos Fiados"])
     
-    with aba_cad:
-        with st.expander("➕ Cadastrar Novo Cliente"):
-            nome = st.text_input("Nome do Cliente")
-            tel = st.text_input("Telefone", value="")
-            limite = st.number_input("Limite (R$)", min_value=0.0, value=200.0)
-            if st.button("Salvar Cliente"):
-                # Envia apenas os dados do novo cliente sem reescrever a tabela toda
-                adicionar_registro_web("Clientes", [nome, str(tel).strip(), float(limite), 0.0])
-                st.success("Salvo com sucesso!")
-                st.rerun()
-                
-        st.write("### 💸 Lançar Compra ou Pagamento")
-        if not df_devedores.empty and len(df_devedores["Nome"].tolist()) > 0:
-            cliente_sel = st.selectbox("Selecione o Cliente:", df_devedores["Nome"].tolist())
-            val_operacao = st.number_input("Valor (R$)", min_value=0.01, step=1.0)
-            cb1, cb2 = st.columns(2)
-            with cb1:
-                if st.button("🔴 Adicionar à Dívida (+ Fiado)", use_container_width=True):
-                    # Registra a alteração como um lançamento direto de acréscimo
-                    adicionar_registro_web("Clientes", [cliente_sel, "", 0.0, float(val_operacao)])
-                    st.rerun()
-            with cb2:
-                if st.button("🟢 Abater Dívida (Cliente Pagou)", use_container_width=True):
-                    # Registra a alteração como um lançamento direto de decréscimo
-                    adicionar_registro_web("Clientes", [cliente_sel, "", 0.0, float(-val_operacao)])
-                    st.rerun()
-        else:
-            st.write("Nenhum cliente cadastrado.")
-            
-    with aba_rem:
-        st.write("Remoções diretas podem ser gerenciadas diretamente na interface do Google Sheets.")
-                
+    st.info("💡 Como a planilha é 100% pública e segura, você pode gerenciar, cadastrar clientes e lançar/abater fiados abrindo o link diretamente no celular ou computador. O painel abaixo atualizará sozinho instantaneamente.")
+    
+    # Botão limpo para o operador abrir a tabela e preencher na hora
+    st.link_button("🔗 ABRIR PLANILHA NO GOOGLE SHEETS", "https://google.com", use_container_width=True)
+    
     st.write("---")
-    st.write("### Lista Geral de Contas")
+    st.write("### Lista Geral de Contas Cadastradas")
     st.dataframe(df_devedores, use_container_width=True)
 
 # ==========================================================
@@ -176,19 +139,10 @@ elif menu == "Gestão de Fiados":
 # ==========================================================
 elif menu == "Tabelas de Preço":
     st.markdown('<div class="dashboard-card"><h2>Tabelas de Preços e Estoque</h2></div>', unsafe_allow_html=True)
-    aba_p1, _ = st.tabs(["📋 Lista de Produtos", "🗑️ Remover Produto"])
     
-    with aba_p1:
-        with st.expander("📦 Adicionar Novo Produto"):
-            cod = st.text_input("Código")
-            nome_prod = st.text_input("Produto")
-            p_varejo = st.number_input("Preço Varejo", min_value=0.0)
-            p_atacado = st.number_input("Preço Atacado", min_value=0.0)
-            est_inicial = st.number_input("Estoque Atual", min_value=0)
-            est_min = st.number_input("Mínimo", min_value=0)
-            
-            if st.button("Cadastrar Produto"):
-                adicionar_registro_web("Produtos", [str(cod).strip(), nome_prod, float(p_varejo), float(p_atacado), int(est_inicial), int(est_min)])
-                st.rerun()
-                
-        st.dataframe(df_produtos, use_container_width=True)
+    st.info("📋 Modifique os preços, códigos de barra e quantidades de estoque abrindo a planilha pelo link abaixo. O painel do Streamlit atualizará as métricas e os gráficos em tempo real.")
+    
+    st.link_button("🔗 EDITAR PRODUTOS E ESTOQUE", "https://google.com", use_container_width=True)
+    
+    st.write("---")
+    st.dataframe(df_produtos, use_container_width=True)
