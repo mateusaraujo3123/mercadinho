@@ -75,7 +75,8 @@ try:
     df_produtos["Minimo"] = pd.to_numeric(df_produtos["Minimo"], errors='coerce').fillna(0).astype(int)
 
 except Exception as e:
-    st.error("⚠️ Erro de conexão com o Google Sheets. Verifique o arquivo secrets.toml.")
+    st.error("⚠️ Ocorreu um erro real na conexão:")
+    st.exception(e)  # Isso vai printar o erro exato do Python na tela do seu app
     st.stop()
 
 opcoes_menu = ["Dashboard Inicial", "Gestão de Fiados", "Tabelas de Preço"]
