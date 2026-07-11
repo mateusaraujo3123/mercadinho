@@ -1,2 +1,4 @@
-git+https://github.com/streamlit/gsheets-connection
+streamlit
+pandas
 plotly
+streamlit-gsheets
