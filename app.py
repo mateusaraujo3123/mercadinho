@@ -58,20 +58,15 @@ def ler_dados_macro(nome_aba):
         return pd.DataFrame(columns=["Nome", "Telefone", "Limite", "Divida"])
     return pd.DataFrame(columns=["Código", "Produto", "Preço", "Atacado", "Estoque", "Minimo"])
 
-def salvar_dados_macro(nome_aba, df_atualizado):
-    """Envia a tabela completa estruturada limpando tipos do Pandas para evitar crash."""
-    try:
-        url_macro = st.secrets["connections"]["gsheets"]["macro_url"]
-        
-        # Cria uma cópia limpa para não quebrar a exibição atual
-        df_limpo = df_atualizado.copy()
-        
         # Garante que colunas de identificadores fiquem como texto puro
         if "Telefone" in df_limpo.columns:
             df_limpo["Telefone"] = df_limpo["Telefone"].astype(str).replace(r'\.0$', '', regex=True)
         if "Código" in df_limpo.columns:
             df_limpo["Código"] = df_limpo["Código"].astype(str).replace(r'\.0$', '', regex=True)
-            
+
+        # Conversão simplificada: tudo vira string para evitar erro de JSON
+        lista_linhas = df_limpo.astype(str).fillna("").values.tolist()
+
         # BLINDAGEM CRÍTICA: Converte tipos matemáticos do Pandas (int64/float64) para tipos comuns do Python
         # Isso impede que o requests estruture um JSON corrompido que derruba o servidor
         lista_linhas = []
