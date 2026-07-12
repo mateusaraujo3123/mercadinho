@@ -114,17 +114,16 @@ def salvar_dados_macro(nome_aba, df_atualizado):
 df_devedores = ler_dados_macro("Clientes")
 df_produtos = ler_dados_macro("Produtos")
 
-# Conversão de tipos com blindagem
-# Conversão de tipos com blindagem
+# Conversão de tipos com checagem
 if "Limite" in df_devedores.columns:
     df_devedores["Limite"] = pd.to_numeric(df_devedores["Limite"], errors='coerce').fillna(0.0)
 else:
-    df_devedores["Limite"] = 0.0
+    df_devedores["Limite"] = pd.Series([0.0] * len(df_devedores))
 
 if "Divida" in df_devedores.columns:
     df_devedores["Divida"] = pd.to_numeric(df_devedores["Divida"], errors='coerce').fillna(0.0)
 else:
-    df_devedores["Divida"] = 0.0
+    df_devedores["Divida"] = pd.Series([0.0] * len(df_devedores))
 
 df_produtos["Preço"] = pd.to_numeric(df_produtos["Preço"], errors='coerce').fillna(0.0)
 df_produtos["Atacado"] = pd.to_numeric(df_produtos["Atacado"], errors='coerce').fillna(0.0)
